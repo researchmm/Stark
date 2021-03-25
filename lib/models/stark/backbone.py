@@ -46,7 +46,7 @@ class FrozenBatchNorm2d(torch.nn.Module):
         rv = self.running_var.reshape(1, -1, 1, 1)
         rm = self.running_mean.reshape(1, -1, 1, 1)
         eps = 1e-5
-        scale = w * (rv + eps).rsqrt() # rsqrt(x): 1/sqrt(x), r: reciprocal
+        scale = w * (rv + eps).rsqrt()  # rsqrt(x): 1/sqrt(x), r: reciprocal
         bias = b - rm * scale
         return x * scale + bias
 
@@ -57,13 +57,13 @@ class BackboneBase(nn.Module):
         super().__init__()
         for name, parameter in backbone.named_parameters():
             if not train_backbone or 'layer2' not in name and 'layer3' not in name:
-                parameter.requires_grad_(False) # here should allow users to specify which layers to freeze !
+                parameter.requires_grad_(False)  # here should allow users to specify which layers to freeze !
                 # print('freeze %s'%name)
         if return_interm_layers:
-            return_layers = {"layer1": "0", "layer2": "1", "layer3": "2"} # stride = 4, 8, 16
+            return_layers = {"layer1": "0", "layer2": "1", "layer3": "2"}  # stride = 4, 8, 16
         else:
-            return_layers = {'layer3': "0"} # stride = 16
-        self.body = IntermediateLayerGetter(backbone, return_layers=return_layers) # method in torchvision
+            return_layers = {'layer3': "0"}  # stride = 16
+        self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)  # method in torchvision
         self.num_channels = num_channels
 
     def forward(self, tensor_list: NestedTensor):
@@ -109,44 +109,12 @@ class Joiner(nn.Sequential):
         return out, pos
 
 
-class Joiner_new(nn.Sequential):
-    def __init__(self, backbone, position_embedding_t, position_embedding_s):
-        super().__init__(backbone, position_embedding_t, position_embedding_s)
-
-    def forward(self, tensor_list: NestedTensor, mode: str):
-        xs = self[0](tensor_list)
-        out: List[NestedTensor] = []
-        pos = []
-        for name, x in xs.items():
-            out.append(x)
-            # position encoding
-            if mode == "template":
-                pos.append(self[1](x).to(x.tensors.dtype))
-            elif mode == "search":
-                pos.append(self[2](x).to(x.tensors.dtype))
-            else:
-                raise ValueError("mode should be template or search")
-
-        return out, pos
-
-
 def build_backbone(cfg):
-    if getattr(cfg.MODEL, "INDEPENDENT", False):
-        position_embedding_t = build_position_encoding(cfg)
-        position_embedding_s = build_position_encoding(cfg)
-        train_backbone = cfg.TRAIN.BACKBONE_MULTIPLIER > 0
-        return_interm_layers = cfg.MODEL.PREDICT_MASK
-        backbone = Backbone(cfg.MODEL.BACKBONE.TYPE, train_backbone, return_interm_layers,
-                            cfg.MODEL.BACKBONE.DILATION, cfg.TRAIN.FREEZE_BACKBONE_BN)
-        model = Joiner_new(backbone, position_embedding_t, position_embedding_s)
-        model.num_channels = backbone.num_channels
-        return model
-    else:
-        position_embedding = build_position_encoding(cfg)
-        train_backbone = cfg.TRAIN.BACKBONE_MULTIPLIER > 0
-        return_interm_layers = cfg.MODEL.PREDICT_MASK
-        backbone = Backbone(cfg.MODEL.BACKBONE.TYPE, train_backbone, return_interm_layers,
-                            cfg.MODEL.BACKBONE.DILATION, cfg.TRAIN.FREEZE_BACKBONE_BN)
-        model = Joiner(backbone, position_embedding)
-        model.num_channels = backbone.num_channels
-        return model
+    position_embedding = build_position_encoding(cfg)
+    train_backbone = cfg.TRAIN.BACKBONE_MULTIPLIER > 0
+    return_interm_layers = cfg.MODEL.PREDICT_MASK
+    backbone = Backbone(cfg.MODEL.BACKBONE.TYPE, train_backbone, return_interm_layers,
+                        cfg.MODEL.BACKBONE.DILATION, cfg.TRAIN.FREEZE_BACKBONE_BN)
+    model = Joiner(backbone, position_embedding)
+    model.num_channels = backbone.num_channels
+    return model

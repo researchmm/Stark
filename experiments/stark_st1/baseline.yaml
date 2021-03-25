@@ -1,5 +1,5 @@
 DATA:
-  SEQ_SAMPLER: trident_pro
+  SAMPLER_MODE: trident_pro
   MAX_SAMPLE_INTERVAL:
   - 200
   MEAN:

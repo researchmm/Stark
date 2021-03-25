@@ -29,14 +29,14 @@ class PositionEmbeddingSine(nn.Module):
         mask = tensor_list.mask
         assert mask is not None
         not_mask = ~mask # (b,h,w)
-        y_embed = not_mask.cumsum(1, dtype=torch.float32) # cumulative sum along axis 1 (h axis) --> (b, h, w)
-        x_embed = not_mask.cumsum(2, dtype=torch.float32) # cumulative sum along axis 2 (w axis) --> (b, h, w)
+        y_embed = not_mask.cumsum(1, dtype=torch.float32)  # cumulative sum along axis 1 (h axis) --> (b, h, w)
+        x_embed = not_mask.cumsum(2, dtype=torch.float32)  # cumulative sum along axis 2 (w axis) --> (b, h, w)
         if self.normalize:
             eps = 1e-6
-            y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale # 2pi * (y / sigma(y))
-            x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale # 2pi * (x / sigma(x))
+            y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale  # 2pi * (y / sigma(y))
+            x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale  # 2pi * (x / sigma(x))
 
-        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device) # (0,1,2,...,d/2)
+        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device)  # (0,1,2,...,d/2)
         dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
 
         pos_x = x_embed[:, :, :, None] / dim_t # (b,h,w,d/2)
@@ -51,9 +51,8 @@ class PositionEmbeddingLearned(nn.Module):
     """
     Absolute pos embedding, learned.
     """
-    def __init__(self, num_pos_feats=256, centeral=False):
+    def __init__(self, num_pos_feats=256):
         super().__init__()
-        self.central = centeral
         self.row_embed = nn.Embedding(50, num_pos_feats)
         self.col_embed = nn.Embedding(50, num_pos_feats)
         self.reset_parameters()
@@ -65,19 +64,16 @@ class PositionEmbeddingLearned(nn.Module):
     def forward(self, tensor_list: NestedTensor):
         x = tensor_list.tensors
         h, w = x.shape[-2:]
-        if self.central:
-            i = torch.arange(25 - w//2, 25 + w//2, device=x.device)
-            j = torch.arange(25 - h//2, 25 + h//2, device=x.device)
-        else:
-            i = torch.arange(w, device=x.device)
-            j = torch.arange(h, device=x.device)
+        i = torch.arange(w, device=x.device)
+        j = torch.arange(h, device=x.device)
         x_emb = self.col_embed(i)
         y_emb = self.row_embed(j)
         pos = torch.cat([
             x_emb.unsqueeze(0).repeat(h, 1, 1),
             y_emb.unsqueeze(1).repeat(1, w, 1),
         ], dim=-1).permute(2, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1, 1)
-        return pos # (H,W,C) --> (C,H,W) --> (1,C,H,W) --> (B,C,H,W)
+        return pos  # (H,W,C) --> (C,H,W) --> (1,C,H,W) --> (B,C,H,W)
+
 
 class PositionEmbeddingNone(nn.Module):
     """
@@ -86,10 +82,12 @@ class PositionEmbeddingNone(nn.Module):
     def __init__(self, num_pos_feats=256):
         super().__init__()
         self.n_dim = num_pos_feats * 2
+
     def forward(self, tensor_list: NestedTensor):
         x = tensor_list.tensors
         b, _, h, w = x.size()
-        return torch.zeros((b, self.n_dim, h, w), device=x.device) # (B, C, H, W)
+        return torch.zeros((b, self.n_dim, h, w), device=x.device)  # (B, C, H, W)
+
 
 def build_position_encoding(cfg):
     N_steps = cfg.MODEL.HIDDEN_DIM // 2
@@ -97,7 +95,7 @@ def build_position_encoding(cfg):
         # TODO find a better way of exposing other arguments
         position_embedding = PositionEmbeddingSine(N_steps, normalize=True)
     elif cfg.MODEL.POSITION_EMBEDDING in ('v3', 'learned'):
-        position_embedding = PositionEmbeddingLearned(N_steps, centeral=cfg.MODEL.CENTRAL)
+        position_embedding = PositionEmbeddingLearned(N_steps)
     elif cfg.MODEL.POSITION_EMBEDDING in ('None', ):
         print("Not using positional encoding.")
         position_embedding = PositionEmbeddingNone(N_steps)

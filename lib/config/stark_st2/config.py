@@ -13,7 +13,6 @@ cfg.MODEL.NLAYER_HEAD = 3
 cfg.MODEL.HIDDEN_DIM = 256
 cfg.MODEL.NUM_OBJECT_QUERIES = 1
 cfg.MODEL.POSITION_EMBEDDING = 'sine'  # sine or learned
-cfg.MODEL.CENTRAL = False  # take positional encoding from the central region
 cfg.MODEL.PREDICT_MASK = False
 # MODEL.BACKBONE
 cfg.MODEL.BACKBONE = edict()
@@ -33,7 +32,6 @@ cfg.MODEL.TRANSFORMER.DIVIDE_NORM = False
 
 # TRAIN
 cfg.TRAIN = edict()
-cfg.TRAIN.SHUFFLE = False
 cfg.TRAIN.TRAIN_CLS = True
 cfg.TRAIN.LR = 0.0001
 cfg.TRAIN.WEIGHT_DECAY = 0.0001
@@ -58,11 +56,10 @@ cfg.TRAIN.SCHEDULER.DECAY_RATE = 0.1
 
 # DATA
 cfg.DATA = edict()
-cfg.DATA.SEQ_SAMPLER = "trident_pro"  # sampling methods
+cfg.DATA.SAMPLER_MODE = "trident_pro"  # sampling methods
 cfg.DATA.MEAN = [0.485, 0.456, 0.406]
 cfg.DATA.STD = [0.229, 0.224, 0.225]
 cfg.DATA.MAX_SAMPLE_INTERVAL = [200]
-cfg.DATA.KEEP_ASP_RATIO = False
 # DATA.TRAIN
 cfg.DATA.TRAIN = edict()
 cfg.DATA.TRAIN.DATASETS_NAME = ["LASOT", "GOT10K_vottrain"]

@@ -30,7 +30,6 @@ cfg.MODEL.TRANSFORMER.DIVIDE_NORM = False
 
 # TRAIN
 cfg.TRAIN = edict()
-cfg.TRAIN.FREEZE_BACKBONE = False
 cfg.TRAIN.LR = 0.0001
 cfg.TRAIN.WEIGHT_DECAY = 0.0001
 cfg.TRAIN.EPOCH = 500
@@ -57,8 +56,6 @@ cfg.DATA = edict()
 cfg.DATA.MEAN = [0.485, 0.456, 0.406]
 cfg.DATA.STD = [0.229, 0.224, 0.225]
 cfg.DATA.MAX_SAMPLE_INTERVAL = 200
-cfg.DATA.KEEP_ASP_RATIO = False
-cfg.DATA.CP_PST = False  # whether to use copy-and-paste augmentation
 # DATA.TRAIN
 cfg.DATA.TRAIN = edict()
 cfg.DATA.TRAIN.DATASETS_NAME = ["LASOT", "GOT10K_vottrain"]
@@ -81,8 +78,6 @@ cfg.DATA.TEMPLATE.SIZE = 128
 cfg.DATA.TEMPLATE.FACTOR = 2.0
 cfg.DATA.TEMPLATE.CENTER_JITTER = 0
 cfg.DATA.TEMPLATE.SCALE_JITTER = 0
-cfg.DATA.TEMPLATE.MASK_OUT = False
-cfg.DATA.TEMPLATE.MASK_OUT_COEF = 1.0
 
 # TEST
 cfg.TEST = edict()

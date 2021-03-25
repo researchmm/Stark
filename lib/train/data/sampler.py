@@ -8,12 +8,6 @@ def no_processing(data):
     return data
 
 
-def copy_and_paste(data, data_aux):
-    m = data_aux["search_masks"].unsqueeze(1)
-    data["search_images"] = data["search_images"] * (1-m) + data_aux["search_images"] * m
-    return data
-
-
 class TrackingSampler(torch.utils.data.Dataset):
     """ Class responsible for sampling frames from training sequences to form batches. 
 
@@ -28,7 +22,7 @@ class TrackingSampler(torch.utils.data.Dataset):
 
     def __init__(self, datasets, p_datasets, samples_per_epoch, max_gap,
                  num_search_frames, num_template_frames=1, processing=no_processing, frame_sample_mode='causal',
-                 aux_dataset=None, train_cls=False, pos_prob=0.5):
+                 train_cls=False, pos_prob=0.5):
         """
         args:
             datasets - List of datasets to be used for training
@@ -42,7 +36,6 @@ class TrackingSampler(torch.utils.data.Dataset):
                                 otherwise randomly within the interval.
         """
         self.datasets = datasets
-        self.aux_dataset = aux_dataset
         self.train_cls = train_cls  # whether we are training classification
         self.pos_prob = pos_prob  # probability of sampling positive class when making classification
 
@@ -102,29 +95,18 @@ class TrackingSampler(torch.utils.data.Dataset):
         if self.train_cls:
             return self.getitem_cls()
         else:
-            data = self.getitem(index)
-            if self.processing.settings.cp_pst and self.aux_dataset is not None:
-                data_aux = self.getitem(index, aux=True)
-                return copy_and_paste(data, data_aux)
-            else:
-                return data
+            return self.getitem()
 
-    def getitem(self, index, aux=False):
+    def getitem(self):
         """
-        args:
-            index (int): Index (Ignored since we sample randomly)
-            aux (bool): whether the current data is for auxiliary use (e.g. copy-and-paste)
-
         returns:
             TensorDict - dict containing all the data blocks
         """
         valid = False
         while not valid:
             # Select a dataset
-            if not aux:
-                dataset = random.choices(self.datasets, self.p_datasets)[0]
-            else:
-                dataset = self.aux_dataset
+            dataset = random.choices(self.datasets, self.p_datasets)[0]
+
             is_video_dataset = dataset.is_video_sequence()
 
             # sample a sequence from the given dataset
@@ -135,25 +117,7 @@ class TrackingSampler(torch.utils.data.Dataset):
                 search_frame_ids = None
                 gap_increase = 0
 
-                if self.frame_sample_mode == 'interval':
-                    # Sample frame numbers within interval defined by the first frame
-                    while search_frame_ids is None:
-                        base_frame_id = self._sample_visible_ids(visible, num_ids=1)
-                        extra_template_frame_ids = self._sample_visible_ids(visible, num_ids=self.num_template_frames - 1,
-                                                                         min_id=base_frame_id[
-                                                                                    0] - self.max_gap - gap_increase,
-                                                                         max_id=base_frame_id[
-                                                                                    0] + self.max_gap + gap_increase)
-                        if extra_template_frame_ids is None:
-                            gap_increase += 5
-                            continue
-                        template_frame_ids = base_frame_id + extra_template_frame_ids
-                        search_frame_ids = self._sample_visible_ids(visible, num_ids=self.num_search_frames,
-                                                                  min_id=template_frame_ids[0] - self.max_gap - gap_increase,
-                                                                  max_id=template_frame_ids[0] + self.max_gap + gap_increase)
-                        gap_increase += 5  # Increase gap until a frame is found
-
-                elif self.frame_sample_mode == 'causal':
+                if self.frame_sample_mode == 'causal':
                     # Sample test and train frames in a causal manner, i.e. search_frame_ids > template_frame_ids
                     while search_frame_ids is None:
                         base_frame_id = self._sample_visible_ids(visible, num_ids=1, min_id=self.num_template_frames - 1,
@@ -170,17 +134,7 @@ class TrackingSampler(torch.utils.data.Dataset):
                                                                   num_ids=self.num_search_frames)
                         # Increase gap until a frame is found
                         gap_increase += 5
-                elif self.frame_sample_mode == 'sequential':
-                    # Sample test and train frames in a sequential manner
-                    frame_ids = self._sample_visible_ids(visible, num_ids=self.num_template_frames+self.num_search_frames)
-                    if frame_ids is not None:
-                        frame_ids = sorted(frame_ids)
-                        template_frame_ids = frame_ids[:self.num_template_frames]
-                        search_frame_ids = frame_ids[self.num_template_frames:]
-                        # print("template frame ids: ", template_frame_ids, end='\t')
-                        # print("search frame ids: ", search_frame_ids)
-                    else:
-                        template_frame_ids, search_frame_ids = None, None
+
                 elif self.frame_sample_mode == "trident" or self.frame_sample_mode == "trident_pro":
                     template_frame_ids, search_frame_ids = self.get_frame_ids_trident(visible)
             else:
@@ -337,8 +291,10 @@ class TrackingSampler(torch.utils.data.Dataset):
         template_frame_ids_extra = []
         while None in template_frame_ids_extra or len(template_frame_ids_extra) == 0:
             template_frame_ids_extra = []
-            template_frame_id1 = self._sample_visible_ids(visible, num_ids=1)
-            search_frame_ids = self._sample_visible_ids(visible, num_ids=1)
+            # first randomly sample two frames from a video
+            template_frame_id1 = self._sample_visible_ids(visible, num_ids=1)  # the initial template id
+            search_frame_ids = self._sample_visible_ids(visible, num_ids=1)  # the search region id
+            # get the dynamic template id
             for max_gap in self.max_gap:
                 if template_frame_id1[0] >= search_frame_ids[0]:
                     min_id, max_id = search_frame_ids[0], search_frame_ids[0] + max_gap

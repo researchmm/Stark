@@ -5,7 +5,6 @@ from lib.train.dataset import Lasot, Got10k, MSCOCOSeq, ImagenetVID
 from lib.train.dataset import Lasot_lmdb, Got10k_lmdb, MSCOCOSeq_lmdb, ImagenetVID_lmdb, TrackingNet_lmdb
 from lib.train.data import sampler, opencv_loader, processing, LTRLoader
 import lib.train.data.transforms as tfm
-from easydict import EasyDict as edict
 
 
 def update_settings(settings, cfg):
@@ -18,12 +17,10 @@ def update_settings(settings, cfg):
                                      'search': cfg.DATA.SEARCH.CENTER_JITTER}
     settings.scale_jitter_factor = {'template': cfg.DATA.TEMPLATE.SCALE_JITTER,
                                     'search': cfg.DATA.SEARCH.SCALE_JITTER}
-    settings.keep_asp_ratio = cfg.DATA.KEEP_ASP_RATIO
     settings.grad_clip_norm = cfg.TRAIN.GRAD_CLIP_NORM
     settings.print_stats = None
     settings.batchsize = cfg.TRAIN.BATCH_SIZE
     settings.scheduler_type = cfg.TRAIN.SCHEDULER.TYPE
-    settings.shuffle = getattr(cfg.TRAIN, "SHUFFLE", False)
 
 
 def names2datasets(name_list: list, settings, image_loader):
@@ -91,54 +88,37 @@ def build_dataloaders(cfg, settings):
     # The tracking pairs processing module
     output_sz = settings.output_sz
     search_area_factor = settings.search_area_factor
-    if getattr(cfg.TRAIN, "SEQ", False):
-        output_sz = {'template': cfg.DATA.SEARCH.SIZE, 'search': cfg.DATA.SEARCH.SIZE}
-        search_area_factor = {'template': cfg.DATA.SEARCH.FACTOR, 'search': cfg.DATA.SEARCH.FACTOR}
-    # whether to mask out background region on the template
-    settings.mask_out = getattr(cfg.DATA.TEMPLATE, "MASK_OUT", False)
-    # (2021.2.9) whether to use copy-and-paste
-    settings.cp_pst = getattr(cfg.DATA, "CP_PST", False)
-    # (2021.2.21) mask out coefficient (whether to expand box)
-    settings.mask_out_coef = getattr(cfg.DATA.TEMPLATE, "MASK_OUT_COEF", 1)
-    aux_dataset = None
-    if settings.cp_pst:
-        if settings.use_lmdb:
-            print("Building COCO2017 from lmdb as auxiliary dataset")
-            aux_dataset = MSCOCOSeq_lmdb(settings.env.coco_lmdb_dir, version="2017", image_loader=opencv_loader)
-        else:
-            aux_dataset = MSCOCOSeq(settings.env.coco_dir, version="2017", image_loader=opencv_loader)
 
-    data_processing_train = processing.LittleBoyProcessing(search_area_factor=search_area_factor,
-                                                           output_sz=output_sz,
-                                                           center_jitter_factor=settings.center_jitter_factor,
-                                                           scale_jitter_factor=settings.scale_jitter_factor,
-                                                           mode='sequence',
-                                                           transform=transform_train,
-                                                           joint_transform=transform_joint,
-                                                           settings=settings)
+    data_processing_train = processing.STARKProcessing(search_area_factor=search_area_factor,
+                                                       output_sz=output_sz,
+                                                       center_jitter_factor=settings.center_jitter_factor,
+                                                       scale_jitter_factor=settings.scale_jitter_factor,
+                                                       mode='sequence',
+                                                       transform=transform_train,
+                                                       joint_transform=transform_joint,
+                                                       settings=settings)
 
-    data_processing_val = processing.LittleBoyProcessing(search_area_factor=search_area_factor,
-                                                         output_sz=output_sz,
-                                                         center_jitter_factor=settings.center_jitter_factor,
-                                                         scale_jitter_factor=settings.scale_jitter_factor,
-                                                         mode='sequence',
-                                                         transform=transform_val,
-                                                         joint_transform=transform_joint,
-                                                         settings=settings)
+    data_processing_val = processing.STARKProcessing(search_area_factor=search_area_factor,
+                                                     output_sz=output_sz,
+                                                     center_jitter_factor=settings.center_jitter_factor,
+                                                     scale_jitter_factor=settings.scale_jitter_factor,
+                                                     mode='sequence',
+                                                     transform=transform_val,
+                                                     joint_transform=transform_joint,
+                                                     settings=settings)
 
     # Train sampler and loader
     settings.num_template = getattr(cfg.DATA.TEMPLATE, "NUMBER", 1)
     settings.num_search = getattr(cfg.DATA.SEARCH, "NUMBER", 1)
-    seq_sampler = getattr(cfg.DATA, "SEQ_SAMPLER", "causal")
+    sampler_mode = getattr(cfg.DATA, "SAMPLER_MODE", "causal")
     train_cls = getattr(cfg.TRAIN, "TRAIN_CLS", False)
-    print("seq_sampler", seq_sampler)
-    dataset_train = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.TRAIN.DATASETS_NAME,
-                                                                    settings, opencv_loader),
+    print("sampler_mode", sampler_mode)
+    dataset_train = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.TRAIN.DATASETS_NAME, settings, opencv_loader),
                                             p_datasets=cfg.DATA.TRAIN.DATASETS_RATIO,
                                             samples_per_epoch=cfg.DATA.TRAIN.SAMPLE_PER_EPOCH,
                                             max_gap=cfg.DATA.MAX_SAMPLE_INTERVAL, num_search_frames=settings.num_search,
                                             num_template_frames=settings.num_template, processing=data_processing_train,
-                                            frame_sample_mode=seq_sampler, aux_dataset=aux_dataset, train_cls=train_cls)
+                                            frame_sample_mode=sampler_mode, train_cls=train_cls)
 
     train_sampler = DistributedSampler(dataset_train) if settings.local_rank != -1 else None
     shuffle = False if settings.local_rank != -1 else True
@@ -147,13 +127,12 @@ def build_dataloaders(cfg, settings):
                              num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=train_sampler)
 
     # Validation samplers and loaders
-    dataset_val = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.VAL.DATASETS_NAME,
-                                                                  settings, opencv_loader),
+    dataset_val = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.VAL.DATASETS_NAME, settings, opencv_loader),
                                           p_datasets=cfg.DATA.VAL.DATASETS_RATIO,
                                           samples_per_epoch=cfg.DATA.VAL.SAMPLE_PER_EPOCH,
                                           max_gap=cfg.DATA.MAX_SAMPLE_INTERVAL, num_search_frames=settings.num_search,
                                           num_template_frames=settings.num_template, processing=data_processing_val,
-                                          frame_sample_mode=seq_sampler, train_cls=train_cls)
+                                          frame_sample_mode=sampler_mode, train_cls=train_cls)
     val_sampler = DistributedSampler(dataset_val) if settings.local_rank != -1 else None
     loader_val = LTRLoader('val', dataset_val, training=False, batch_size=cfg.TRAIN.BATCH_SIZE,
                            num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=val_sampler,
@@ -163,15 +142,7 @@ def build_dataloaders(cfg, settings):
 
 
 def get_optimizer_scheduler(net, cfg):
-    freeze_backbone = getattr(cfg.TRAIN, "FREEZE_BACKBONE", False)
     train_cls = getattr(cfg.TRAIN, "TRAIN_CLS", False)
-    if freeze_backbone:
-        param_dicts = [
-            {"params": [p for n, p in net.named_parameters() if "backbone" not in n and p.requires_grad]}
-        ]
-        for n, p in net.named_parameters():
-            if "backbone" in n:
-                p.requires_grad = False
     if train_cls:
         print("Only training classification head. Learnable parameters are shown below.")
         param_dicts = [

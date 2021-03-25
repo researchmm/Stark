@@ -1,5 +1,5 @@
 """
-LittleBoy Transformer class.
+STARK Transformer class.
 
 Copy-paste from torch.nn.Transformer with modifications:
     * positional encodings are passed in MHattention
@@ -61,7 +61,6 @@ class Transformer(nn.Module):
         self.d_model = d_model
         self.nhead = nhead
         self.d_feed = dim_feedforward
-
         # 2021.1.7 Try dividing norm to avoid NAN
         self.divide_norm = divide_norm
         self.scale_factor = float(d_model // nhead) ** 0.5
@@ -201,24 +200,18 @@ class TransformerEncoderLayer(nn.Module):
                      src_mask: Optional[Tensor] = None,
                      src_key_padding_mask: Optional[Tensor] = None,
                      pos: Optional[Tensor] = None):
-        # check_valid(src, "encoder layer input")
-        q = k = self.with_pos_embed(src, pos) # add pos to src
-        # check_valid(q, "encoder query")
-        # check_valid(k, "encoder key")
-        # check_valid(src, "encoder value")
+        q = k = self.with_pos_embed(src, pos)  # add pos to src
         if self.divide_norm:
             # print("encoder divide by norm")
             q = q / torch.norm(q, dim=-1, keepdim=True) * self.scale_factor
             k = k / torch.norm(k, dim=-1, keepdim=True)
         src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
-        # check_valid(src2, "encoder layer attention output")
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
         src = src + self.dropout2(src2)
         src = self.norm2(src)
-        # check_valid(src, "encoder layer FFN output")
         return src
 
     def forward_pre(self, src,
@@ -227,7 +220,6 @@ class TransformerEncoderLayer(nn.Module):
                     pos: Optional[Tensor] = None):
         src2 = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
-
         src2 = self.self_attn(q, k, value=src2, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
@@ -281,40 +273,28 @@ class TransformerDecoderLayer(nn.Module):
                      pos: Optional[Tensor] = None,
                      query_pos: Optional[Tensor] = None):
         # self-attention
-        # check_valid(tgt, "decoder layer input")
-        q = k = self.with_pos_embed(tgt, query_pos) # Add object query to the query and key
-        # check_valid(q, "decoder self-attention query")
-        # check_valid(k, "decoder self-attention key")
-        # check_valid(tgt, "decoder self-attention value")
+        q = k = self.with_pos_embed(tgt, query_pos)  # Add object query to the query and key
         if self.divide_norm:
-            # print("decoder self-attention divide by norm")
             q = q / torch.norm(q, dim=-1, keepdim=True) * self.scale_factor
             k = k / torch.norm(k, dim=-1, keepdim=True)
         tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
-        # check_valid(tgt2, "decoder self-attention output")
         tgt = tgt + self.dropout1(tgt2)
         tgt = self.norm1(tgt)
         # mutual attention
         queries, keys = self.with_pos_embed(tgt, query_pos), self.with_pos_embed(memory, pos)
-        # check_valid(queries, "decoder mutual-attention query")
-        # check_valid(keys, "decoder mutual-attention key")
-        # check_valid(memory, "decoder mutual-attention value")
         if self.divide_norm:
-            # print("decoder mutual-attention divide by norm")
             queries = queries / torch.norm(queries, dim=-1, keepdim=True) * self.scale_factor
             keys = keys / torch.norm(keys, dim=-1, keepdim=True)
         tgt2 = self.multihead_attn(query=queries,
                                    key=keys,
                                    value=memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
-        # check_valid(tgt2, "decoder mutual-attention output")
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)
         tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
         tgt = tgt + self.dropout3(tgt2)
         tgt = self.norm3(tgt)
-        # check_valid(tgt, "decoder FFN output")
         return tgt
 
     def forward_pre(self, tgt, memory,
