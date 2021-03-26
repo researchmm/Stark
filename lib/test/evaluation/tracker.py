@@ -49,7 +49,8 @@ class Tracker:
         if result_only:
             self.results_dir = '{}/{}/{}'.format(env.results_path, "LaSOT", self.name)
 
-        tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tracker', self.name))
+        tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                              '..', 'tracker', '%s.py' % self.name))
         if os.path.isfile(tracker_module_abspath):
             tracker_module = importlib.import_module('lib.test.tracker.{}'.format(self.name))
             self.tracker_class = tracker_module.get_tracker_class()
