@@ -2,13 +2,13 @@ import argparse
 import torch
 import _init_paths
 from lib.utils.merge import merge_template_search
-from lib.config.stark_s.config import cfg, update_config_from_file
-from lib.models.stark.stark_s import build_starks
+# from lib.config.stark_s.config import cfg, update_config_from_file
+# from lib.models.stark.stark_s import build_starks
 from lib.utils.misc import NestedTensor
 from thop import profile
 from thop.utils import clever_format
 import time
-
+import importlib
 
 def parse_args():
     """
@@ -16,7 +16,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='Parse args for training')
     # for train
-    parser.add_argument('--script', type=str, default='stark_s', help='training script name')
+    parser.add_argument('--script', type=str, default='stark_s', choices=['stark_s', 'stark_st2'],
+                        help='training script name')
     parser.add_argument('--config', type=str, default='baseline', help='yaml configure file name')
     args = parser.parse_args()
 
@@ -76,32 +77,55 @@ def get_data(bs, sz):
 
 
 if __name__ == "__main__":
-    device = "cuda:7"
+    device = "cuda:0"
     torch.cuda.set_device(device)
     # Compute the Flops and Params of our STARK-S model
-    '''build the model'''
     args = parse_args()
-    cfg_fname = 'experiments/%s/%s.yaml' % (args.script, args.config)
-    update_config_from_file(cfg_fname)
-    model = build_starks(cfg)
-    '''get toy data'''
+    '''update cfg'''
+    yaml_fname = 'experiments/%s/%s.yaml' % (args.script, args.config)
+    config_module = importlib.import_module('lib.config.%s.config' % args.script)
+    cfg = config_module.cfg
+    config_module.update_config_from_file(yaml_fname)
+    '''set some values'''
     bs = 1
     z_sz = cfg.TEST.TEMPLATE_SIZE
     x_sz = cfg.TEST.SEARCH_SIZE
     h_dim = cfg.MODEL.HIDDEN_DIM
-    # get the template
-    template = get_data(bs, z_sz)
-    # get the search
-    search = get_data(bs, x_sz)
-    # transfer to device
-    model = model.to(device)
-    template = template.to(device)
-    search = search.to(device)
+    if args.script == "stark_s":
+        model_module = importlib.import_module('lib.models.stark.stark_s')
+        model_constructor = model_module.build_starks
+        model = model_constructor(cfg)
+        # get the template and search
+        template = get_data(bs, z_sz)
+        search = get_data(bs, x_sz)
+        # transfer to device
+        model = model.to(device)
+        template = template.to(device)
+        search = search.to(device)
+        # forward template and search
+        oup_t = model.forward_backbone(template)
+        oup_s = model.forward_backbone(search)
+        seq_dict = merge_template_search([oup_t, oup_s])
+        # evaluate the model properties
+        evaluate(model, search, seq_dict, run_box_head=False, run_cls_head=False)
+    elif args.script == "stark_st2":
+        model_module = importlib.import_module('lib.models.stark.stark_st')
+        model_constructor = model_module.build_starkst
+        model = model_constructor(cfg)
+        # get the template and search
+        template1 = get_data(bs, z_sz)
+        template2 = get_data(bs, z_sz)
+        search = get_data(bs, x_sz)
+        # transfer to device
+        model = model.to(device)
+        template1 = template1.to(device)
+        template2 = template2.to(device)
+        search = search.to(device)
+        # forward template and search
+        oup_t1 = model.forward_backbone(template1)
+        oup_t2 = model.forward_backbone(template2)
+        oup_s = model.forward_backbone(search)
+        seq_dict = merge_template_search([oup_t1, oup_t2, oup_s])
+        # evaluate the model properties
+        evaluate(model, search, seq_dict, run_box_head=True, run_cls_head=True)
 
-    # forward template and search
-    oup_t = model.forward_backbone(template)
-    oup_s = model.forward_backbone(search)
-    seq_dict = merge_template_search([oup_t, oup_s])
-
-    # evaluate the model properties
-    evaluate(model, search, seq_dict, run_box_head=False, run_cls_head=False)

@@ -7,6 +7,7 @@ import torch
 import time
 from torch.utils.data.distributed import DistributedSampler
 
+
 class LTRTrainer(BaseTrainer):
     def __init__(self, actor, loaders, optimizer, settings, lr_scheduler=None):
         """
@@ -28,8 +29,9 @@ class LTRTrainer(BaseTrainer):
         # Initialize tensorboard
         if settings.local_rank in [-1, 0]:
             tensorboard_writer_dir = os.path.join(self.settings.env.tensorboard_dir, self.settings.project_path)
+            if not os.path.exists(tensorboard_writer_dir):
+                os.makedirs(tensorboard_writer_dir)
             self.tensorboard_writer = TensorboardWriter(tensorboard_writer_dir, [l.name for l in loaders])
-
 
         self.move_data_to_gpu = getattr(settings, 'move_data_to_gpu', True)
         self.settings = settings

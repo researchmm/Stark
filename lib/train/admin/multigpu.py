@@ -1,4 +1,5 @@
 import torch.nn as nn
+# Here we use DistributedDataParallel(DDP) rather than DataParallel(DP) for multiple GPUs training
 
 
 def is_multi_gpu(net):
