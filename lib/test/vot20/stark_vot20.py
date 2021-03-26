@@ -23,7 +23,6 @@ class stark_vot20(object):
         params = tracker_info.get_parameters()
         params.visualization = False
         params.debug = False
-        params.visdom_info = {'use_visdom': False, 'server': '127.0.0.1', 'port': 8097}
         self.tracker = tracker_info.create_tracker(params)
 
     def initialize(self, img_rgb, mask):
