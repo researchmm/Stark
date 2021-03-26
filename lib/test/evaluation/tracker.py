@@ -8,7 +8,7 @@ import cv2 as cv
 from lib.utils.lmdb_utils import decode_img
 
 
-def trackerlist(name: str, parameter_name: str, run_ids = None, display_name: str = None,
+def trackerlist(name: str, parameter_name: str, dataset_name: str, run_ids = None, display_name: str = None,
                 result_only=False):
     """Generate list of trackers.
     args:
@@ -19,7 +19,7 @@ def trackerlist(name: str, parameter_name: str, run_ids = None, display_name: st
     """
     if run_ids is None or isinstance(run_ids, int):
         run_ids = [run_ids]
-    return [Tracker(name, parameter_name, run_id, display_name, result_only) for run_id in run_ids]
+    return [Tracker(name, parameter_name, dataset_name, run_id, display_name, result_only) for run_id in run_ids]
 
 
 class Tracker:
@@ -129,15 +129,6 @@ class Tracker:
         _store_outputs(out, init_default)
 
         for frame_num, frame_path in enumerate(seq.frames[1:], start=1):
-            while True:
-                if not self.pause_mode:
-                    break
-                elif self.step:
-                    self.step = False
-                    break
-                else:
-                    time.sleep(0.1)
-
             image = self._read_image(frame_path)
 
             start_time = time.time()
