@@ -12,7 +12,7 @@ from lib.test.evaluation.tracker import Tracker
 
 
 def run_tracker(tracker_name, tracker_param, run_id=None, dataset_name='otb', sequence=None, debug=0, threads=0,
-                visdom_info=None, num_gpus=8):
+                num_gpus=8):
     """Run tracker on sequence or dataset.
     args:
         tracker_name: Name of tracking method.
@@ -22,10 +22,7 @@ def run_tracker(tracker_name, tracker_param, run_id=None, dataset_name='otb', se
         sequence: Sequence number or name.
         debug: Debug level.
         threads: Number of threads.
-        visdom_info: Dict optionally containing 'use_visdom', 'server' and 'port' for Visdom visualization.
     """
-
-    visdom_info = {} if visdom_info is None else visdom_info
 
     dataset = get_dataset(dataset_name)
 
@@ -34,7 +31,7 @@ def run_tracker(tracker_name, tracker_param, run_id=None, dataset_name='otb', se
 
     trackers = [Tracker(tracker_name, tracker_param, dataset_name, run_id)]
 
-    run_dataset(dataset, trackers, debug, threads, visdom_info=visdom_info, num_gpus=num_gpus)
+    run_dataset(dataset, trackers, debug, threads, num_gpus=num_gpus)
 
 
 def main():
@@ -46,9 +43,6 @@ def main():
     parser.add_argument('--sequence', type=str, default=None, help='Sequence number or name.')
     parser.add_argument('--debug', type=int, default=0, help='Debug level.')
     parser.add_argument('--threads', type=int, default=0, help='Number of threads.')
-    parser.add_argument('--use_visdom', type=bool, default=True, help='Flag to enable visdom.')
-    parser.add_argument('--visdom_server', type=str, default='127.0.0.1', help='Server for visdom.')
-    parser.add_argument('--visdom_port', type=int, default=8097, help='Port for visdom.')
     parser.add_argument('--num_gpus', type=int, default=8)
 
     args = parser.parse_args()
@@ -59,8 +53,7 @@ def main():
         seq_name = args.sequence
 
     run_tracker(args.tracker_name, args.tracker_param, args.runid, args.dataset_name, seq_name, args.debug,
-                args.threads, {'use_visdom': args.use_visdom, 'server': args.visdom_server, 'port': args.visdom_port},
-                num_gpus=args.num_gpus)
+                args.threads, num_gpus=args.num_gpus)
 
 
 if __name__ == '__main__':
