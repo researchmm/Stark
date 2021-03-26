@@ -177,6 +177,7 @@ class TransformBase:
         """2020.12.24 Added to deal with attention masks"""
         return att
 
+
 class ToTensor(TransformBase):
     """Convert to a Tensor"""
 
@@ -203,8 +204,6 @@ class ToTensor(TransformBase):
             return att.to(torch.bool)
         else:
             raise ValueError ("dtype must be np.ndarray or torch.Tensor")
-
-
 
 
 class ToTensorAndJitter(TransformBase):
@@ -239,6 +238,7 @@ class ToTensorAndJitter(TransformBase):
             return att.to(torch.bool)
         else:
             raise ValueError ("dtype must be np.ndarray or torch.Tensor")
+
 
 class Normalize(TransformBase):
     """Normalize image"""
