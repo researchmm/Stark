@@ -81,13 +81,13 @@ python tracking/analysis_results.py # need to modify tracker configs and names
 ```
 - GOT10K-test
 ```
-python tracking/test.py stark_s baseline_got10k_only --dataset got10k_test --threads 32
-python lib/test/utils/transform_got10k.py --tracker_name stark_s --cfg_name baseline_got10k_only
+python tracking/test.py stark_st baseline_got10k_only --dataset got10k_test --threads 32
+python lib/test/utils/transform_got10k.py --tracker_name stark_st --cfg_name baseline_got10k_only
 ```
 - TrackingNet
 ```
-python tracking/test.py stark_s baseline --dataset trackingnet --threads 32
-python lib/test/utils/transform_trackingnet.py --tracker_name stark_s --cfg_name baseline
+python tracking/test.py stark_st baseline --dataset trackingnet --threads 32
+python lib/test/utils/transform_trackingnet.py --tracker_name stark_st --cfg_name baseline
 ```
 - VOT2020  
 Before evaluating "STARK+AR" on VOT2020, please install some extra packages following [external/AR/README.md](external/AR/README.md)
