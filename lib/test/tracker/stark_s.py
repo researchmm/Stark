@@ -1,4 +1,4 @@
-from lib.test.tracker.base import BaseTracker
+from lib.test.tracker.basetracker import BaseTracker
 import torch
 from lib.train.data.processing_utils import sample_target
 # for debug
@@ -65,8 +65,7 @@ class STARK_S(BaseTracker):
         pred_box = (pred_boxes.mean(dim=0) * self.params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
         # get the final box result
         self.state = clip_box(self.map_box_back(pred_box, resize_factor), H, W, margin=10)
-        # Clipping helps to improve robustness. Experiments shows that it doesn't influence performance
-        # self.state = self.map_box_back(pred_box, resize_factor)
+
         # for debug
         if self.debug:
             x1, y1, w, h = self.state
@@ -75,7 +74,7 @@ class STARK_S(BaseTracker):
             save_path = os.path.join(self.save_dir, "%04d.jpg" % self.frame_id)
             cv2.imwrite(save_path, image_BGR)
         if self.save_all_boxes:
-            '''save all 10 predictions'''
+            '''save all predictions'''
             all_boxes = self.map_box_back_batch(pred_boxes * self.params.search_size / resize_factor, resize_factor)
             all_boxes_save = all_boxes.view(-1).tolist()  # (4N, )
             return {"target_bbox": self.state,
@@ -98,3 +97,7 @@ class STARK_S(BaseTracker):
         cx_real = cx + (cx_prev - half_side)
         cy_real = cy + (cy_prev - half_side)
         return torch.stack([cx_real - 0.5 * w, cy_real - 0.5 * h, w, h], dim=-1)
+
+
+def get_tracker_class():
+    return STARK_S

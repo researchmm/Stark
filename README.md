@@ -94,14 +94,12 @@ Before evaluating "STARK+AR" on VOT2020, please install some extra packages foll
 ```
 cd external/vot20/<workspace_dir>
 export PYTHONPATH=<path to the stark project>:$PYTHONPATH
-# export PYTHONPATH=/data/sda/v-yanbi/iccv21/STARK:$PYTHONPATH 
 bash exp.sh
 ```
 - VOT2020-LT
 ```
 cd external/vot20_lt/<workspace_dir>
 export PYTHONPATH=<path to the stark project>:$PYTHONPATH
-# export PYTHONPATH=/data/sda/v-yanbi/iccv21/STARK:$PYTHONPATH 
 bash exp.sh
 ```
 ## Test FLOPs, Params, and Speed
