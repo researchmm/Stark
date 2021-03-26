@@ -25,10 +25,10 @@ def init_seeds(seed):
 
 def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, save_dir=None, base_seed=None,
                  use_lmdb=False, script_name_prv=None, config_name_prv=None):
-    """Run a train scripts in train_settings.
+    """Run the train script.
     args:
-        module_name: Name of module in the "train_settings/" folder.
-        script_name: Name of the train settings file.
+        script_name: Name of emperiment in the "experiments/" folder.
+        config_name: Name of the yaml file in the "experiments/<script_name>".
         cudnn_benchmark: Use cudnn benchmark or not (default is True).
     """
     if save_dir is None:
@@ -56,7 +56,7 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
     settings.local_rank = local_rank
     settings.save_dir = os.path.abspath(save_dir)
     settings.use_lmdb = use_lmdb
-    prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
     settings.cfg_file = os.path.join(prj_dir, 'experiments/%s/%s.yaml' % (script_name, config_name))
 
     expr_module = importlib.import_module('lib.train.train_script')
