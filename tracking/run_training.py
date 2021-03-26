@@ -59,7 +59,7 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
     prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     settings.cfg_file = os.path.join(prj_dir, 'experiments/%s/%s.yaml' % (script_name, config_name))
 
-    expr_module = importlib.import_module('lib.train.scripts.{}'.format(script_name))
+    expr_module = importlib.import_module('lib.train.train_script')
     expr_func = getattr(expr_module, 'run')
 
     expr_func(settings)

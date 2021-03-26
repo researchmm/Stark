@@ -91,8 +91,9 @@ if __name__ == "__main__":
     z_sz = cfg.TEST.TEMPLATE_SIZE
     x_sz = cfg.TEST.SEARCH_SIZE
     h_dim = cfg.MODEL.HIDDEN_DIM
+    '''import stark network module'''
+    model_module = importlib.import_module('lib.models.stark')
     if args.script == "stark_s":
-        model_module = importlib.import_module('lib.models.stark.stark_s')
         model_constructor = model_module.build_starks
         model = model_constructor(cfg)
         # get the template and search
@@ -107,9 +108,8 @@ if __name__ == "__main__":
         oup_s = model.forward_backbone(search)
         seq_dict = merge_template_search([oup_t, oup_s])
         # evaluate the model properties
-        evaluate(model, search, seq_dict, run_box_head=False, run_cls_head=False)
+        evaluate(model, search, seq_dict, run_box_head=True, run_cls_head=False)
     elif args.script == "stark_st2":
-        model_module = importlib.import_module('lib.models.stark.stark_st')
         model_constructor = model_module.build_starkst
         model = model_constructor(cfg)
         # get the template and search
