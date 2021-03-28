@@ -2,7 +2,7 @@
 The official implementation of the paper **Learning Spatio-Temporal Transformer for Visual Tracking**
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
-### STARK achieves the best performance ever on many short-term and long-term benchmarks
+### The best performances on many short-term and long-term benchmarks
 <table>
   <tr>
     <td>Tracker</td>
@@ -20,9 +20,13 @@ The official implementation of the paper **Learning Spatio-Temporal Transformer 
   </tr>
 </table>
 
+### Real-Time Speed
+STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesla V100 GPU.
+
 ### End-to-End, Post-processing Free
 
-STARK is an **end-to-end** tracking approach, which directly predicts one accurate bounding box as the tracking result, without using any hyperparameters-sensitive post-processing.
+STARK is an **end-to-end** tracking approach, which directly predicts one accurate bounding box as the tracking result.  
+Besides, STARK does not use any hyperparameters-sensitive post-processing, leading to stable performances.
 
 ### Purely PyTorch-based Code
 
