@@ -2,6 +2,23 @@
 The official implementation of the paper **Learning Spatio-Temporal Transformer for Visual Tracking**
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
+### STARK achieves the best performance ever on many short-term and long-term benchmarks
+<table>
+  <tr>
+    <td>Tracker</td>
+    <td>LaSOT</td>
+    <td>GOT-10K</td>
+    <td>TrackingNet</td>
+    <td>VOT2020-LT</td>
+  </tr>
+  <tr>
+    <th>STARK</th>
+    <th>67.1</th>
+    <th>68.8</th>
+    <th>82.0</th>
+    <th>70.2</th>
+  </tr>
+</table>
 
 ### End-to-End, Post-processing Free
 
