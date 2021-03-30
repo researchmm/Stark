@@ -2,23 +2,13 @@
 The official implementation of the paper **Learning Spatio-Temporal Transformer for Visual Tracking**
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
-### The best performances on many short-term and long-term benchmarks
-<table>
-  <tr>
-    <td>Tracker</td>
-    <td>LaSOT</td>
-    <td>GOT-10K</td>
-    <td>TrackingNet</td>
-    <td>VOT2020-LT</td>
-  </tr>
-  <tr>
-    <th>STARK</th>
-    <th>67.1</th>
-    <th>68.8</th>
-    <th>82.0</th>
-    <th>70.2</th>
-  </tr>
-</table>
+### The strongest performances
+| Tracker | LaSOT (AUC)| GOT-10K (AO)| TrackingNet (AUC)|
+|---|---|---|---|
+|**STARK**|**67.1**|**68.8**|**82.0**|
+|TransT|64.9|67.1|81.4|
+|TrDiMP|63.7|67.1|78.4|
+|Siam R-CNN|64.8|64.9|81.2|
 
 ### Real-Time Speed
 STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesla V100 GPU.
