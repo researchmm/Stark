@@ -4,6 +4,10 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-trackingnet)](https://paperswithcode.com/sota/visual-object-tracking-on-trackingnet?p=learning-spatio-temporal-transformer-for)
 
 The official implementation of the paper **Learning Spatio-Temporal Transformer for Visual Tracking**
+
+Hiring research interns for visual transformer projects: houwen.peng@microsoft.com
+
+
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
 ### The strongest performances
