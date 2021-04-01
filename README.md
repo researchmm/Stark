@@ -10,21 +10,21 @@ Hiring research interns for visual transformer projects: houwen.peng@microsoft.c
 
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
-### The strongest performances
+### End-to-End, Post-processing Free
+
+STARK is an **end-to-end** tracking approach, which directly predicts one accurate bounding box as the tracking result.  
+Besides, STARK does not use any hyperparameters-sensitive post-processing, leading to stable performances.
+
+### Real-Time Speed
+STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesla V100 GPU.
+
+### Strong performance
 | Tracker | LaSOT (AUC)| GOT-10K (AO)| TrackingNet (AUC)|
 |---|---|---|---|
 |**STARK**|**67.1**|**68.8**|**82.0**|
 |TransT|64.9|67.1|81.4|
 |TrDiMP|63.7|67.1|78.4|
 |Siam R-CNN|64.8|64.9|81.2|
-
-### Real-Time Speed
-STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesla V100 GPU.
-
-### End-to-End, Post-processing Free
-
-STARK is an **end-to-end** tracking approach, which directly predicts one accurate bounding box as the tracking result.  
-Besides, STARK does not use any hyperparameters-sensitive post-processing, leading to stable performances.
 
 ### Purely PyTorch-based Code
 
