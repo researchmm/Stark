@@ -6,6 +6,8 @@ import time
 import cv2 as cv
 
 from lib.utils.lmdb_utils import decode_img
+from pathlib import Path
+import numpy as np
 
 
 def trackerlist(name: str, parameter_name: str, dataset_name: str, run_ids = None, display_name: str = None,
@@ -146,6 +148,128 @@ class Tracker:
                 output.pop(key)
 
         return output
+
+    def run_video(self, videofilepath, optional_box=None, debug=None, visdom_info=None, save_results=False):
+        """Run the tracker with the vieofile.
+        args:
+            debug: Debug level.
+        """
+
+        params = self.get_parameters()
+
+        debug_ = debug
+        if debug is None:
+            debug_ = getattr(params, 'debug', 0)
+        params.debug = debug_
+
+        params.tracker_name = self.name
+        params.param_name = self.parameter_name
+        # self._init_visdom(visdom_info, debug_)
+
+        multiobj_mode = getattr(params, 'multiobj_mode', getattr(self.tracker_class, 'multiobj_mode', 'default'))
+
+        if multiobj_mode == 'default':
+            tracker = self.create_tracker(params)
+
+        elif multiobj_mode == 'parallel':
+            tracker = MultiObjectWrapper(self.tracker_class, params, self.visdom, fast_load=True)
+        else:
+            raise ValueError('Unknown multi object mode {}'.format(multiobj_mode))
+
+        assert os.path.isfile(videofilepath), "Invalid param {}".format(videofilepath)
+        ", videofilepath must be a valid videofile"
+
+        output_boxes = []
+
+        cap = cv.VideoCapture(videofilepath)
+        display_name = 'Display: ' + tracker.params.tracker_name
+        cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)
+        cv.resizeWindow(display_name, 960, 720)
+        success, frame = cap.read()
+        cv.imshow(display_name, frame)
+
+        def _build_init_info(box):
+            return {'init_bbox': OrderedDict({1: box}), 'init_object_ids': [1, ], 'object_ids': [1, ],
+                    'sequence_object_ids': [1, ]}
+
+        if success is not True:
+            print("Read frame from {} failed.".format(videofilepath))
+            exit(-1)
+        if optional_box is not None:
+            assert isinstance(optional_box, (list, tuple))
+            assert len(optional_box) == 4, "valid box's foramt is [x,y,w,h]"
+            tracker.initialize(frame, _build_init_info(optional_box))
+            output_boxes.append(optional_box)
+        else:
+            while True:
+                # cv.waitKey()
+                frame_disp = frame.copy()
+
+                cv.putText(frame_disp, 'Select target ROI and press ENTER', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL,
+                           1.5, (0, 0, 0), 1)
+
+                x, y, w, h = cv.selectROI(display_name, frame_disp, fromCenter=False)
+                init_state = [x, y, w, h]
+                tracker.initialize(frame, _build_init_info(init_state))
+                output_boxes.append(init_state)
+                break
+
+        while True:
+            ret, frame = cap.read()
+
+            if frame is None:
+                break
+
+            frame_disp = frame.copy()
+
+            # Draw box
+            out = tracker.track(frame)
+            state = [int(s) for s in out['target_bbox'][1]]
+            output_boxes.append(state)
+
+            cv.rectangle(frame_disp, (state[0], state[1]), (state[2] + state[0], state[3] + state[1]),
+                         (0, 255, 0), 5)
+
+            font_color = (0, 0, 0)
+            cv.putText(frame_disp, 'Tracking!', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                       font_color, 1)
+            cv.putText(frame_disp, 'Press r to reset', (20, 55), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                       font_color, 1)
+            cv.putText(frame_disp, 'Press q to quit', (20, 80), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                       font_color, 1)
+
+            # Display the resulting frame
+            cv.imshow(display_name, frame_disp)
+            key = cv.waitKey(1)
+            if key == ord('q'):
+                break
+            elif key == ord('r'):
+                ret, frame = cap.read()
+                frame_disp = frame.copy()
+
+                cv.putText(frame_disp, 'Select target ROI and press ENTER', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL, 1.5,
+                           (0, 0, 0), 1)
+
+                cv.imshow(display_name, frame_disp)
+                x, y, w, h = cv.selectROI(display_name, frame_disp, fromCenter=False)
+                init_state = [x, y, w, h]
+                tracker.initialize(frame, _build_init_info(init_state))
+                output_boxes.append(init_state)
+
+        # When everything done, release the capture
+        cap.release()
+        cv.destroyAllWindows()
+
+        if save_results:
+            if not os.path.exists(self.results_dir):
+                os.makedirs(self.results_dir)
+            video_name = Path(videofilepath).stem
+            base_results_path = os.path.join(self.results_dir, 'video_{}'.format(video_name))
+
+            tracked_bb = np.array(output_boxes).astype(int)
+            bbox_file = '{}.txt'.format(base_results_path)
+            np.savetxt(bbox_file, tracked_bb, delimiter='\t', fmt='%d')
+
 
     def get_parameters(self):
         """Get parameters."""
