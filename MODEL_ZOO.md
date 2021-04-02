@@ -76,7 +76,7 @@ The downloaded checkpoints should be organized in the following structure
                     STARKST_ep0050.pth.tar
    ```
 ### Raw Results
-The raw results are in the format [top_left_x, top_left_y, width, height]. Raw results of GOT-10K and TrackingNet can be 
+The [raw results](https://drive.google.com/drive/folders/16rWehrDmJVmvMsadffOPaCczz7pst4PH?usp=sharing) are in the format [top_left_x, top_left_y, width, height]. Raw results of GOT-10K and TrackingNet can be 
 directly submitted to the corresponding evaluation servers. The folder ```test/tracking_results/``` contains raw results 
 for the LaSOT dataset and results should be organized in the following structure
    ```
