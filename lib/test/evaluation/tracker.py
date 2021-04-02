@@ -189,8 +189,7 @@ class Tracker:
         cv.imshow(display_name, frame)
 
         def _build_init_info(box):
-            return {'init_bbox': OrderedDict({1: box}), 'init_object_ids': [1, ], 'object_ids': [1, ],
-                    'sequence_object_ids': [1, ]}
+            return {'init_bbox': box}
 
         if success is not True:
             print("Read frame from {} failed.".format(videofilepath))
@@ -224,7 +223,7 @@ class Tracker:
 
             # Draw box
             out = tracker.track(frame)
-            state = [int(s) for s in out['target_bbox'][1]]
+            state = [int(s) for s in out['target_bbox']]
             output_boxes.append(state)
 
             cv.rectangle(frame_disp, (state[0], state[1]), (state[2] + state[0], state[3] + state[1]),
