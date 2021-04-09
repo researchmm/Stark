@@ -2,11 +2,11 @@ import numpy as np
 
 
 def make_full_size(x, output_sz):
-    '''
+    """
     zero-pad input x (right and down) to match output_sz
     x: numpy array e.g., binary mask
     output_sz: size of the output [width, height]
-    '''
+    """
     if x.shape[0] == output_sz[1] and x.shape[1] == output_sz[0]:
         return x
     pad_x = output_sz[0] - x.shape[1]
@@ -23,10 +23,10 @@ def make_full_size(x, output_sz):
 
 
 def rect_from_mask(mask):
-    '''
+    """
     create an axis-aligned rectangle from a given binary mask
     mask in created as a minimal rectangle containing all non-zero pixels
-    '''
+    """
     x_ = np.sum(mask, axis=0)
     y_ = np.sum(mask, axis=1)
     x0 = np.min(np.nonzero(x_))
@@ -37,11 +37,11 @@ def rect_from_mask(mask):
 
 
 def mask_from_rect(rect, output_sz):
-    '''
+    """
     create a binary mask from a given rectangle
     rect: axis-aligned rectangle [x0, y0, width, height]
     output_sz: size of the output [width, height]
-    '''
+    """
     mask = np.zeros((output_sz[1], output_sz[0]), dtype=np.uint8)
     x0 = max(int(round(rect[0])), 0)
     y0 = max(int(round(rect[1])), 0)
@@ -52,7 +52,7 @@ def mask_from_rect(rect, output_sz):
 
 
 def bbox_clip(x1, y1, x2, y2, boundary, min_sz=10):
-    '''boundary (H,W)'''
+    """boundary (H,W)"""
     x1_new = max(0, min(x1, boundary[1] - min_sz))
     y1_new = max(0, min(y1, boundary[0] - min_sz))
     x2_new = max(min_sz, min(x2, boundary[1]))

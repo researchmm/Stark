@@ -10,6 +10,7 @@ from thop.utils import clever_format
 import time
 import importlib
 
+
 def parse_args():
     """
     args for training.
@@ -25,7 +26,7 @@ def parse_args():
 
 
 def evaluate(model, search, seq_dict, run_box_head, run_cls_head):
-    '''Compute FLOPs, Params, and Speed'''
+    """Compute FLOPs, Params, and Speed"""
     # # backbone
     macs1, params1 = profile(model, inputs=(search, None, "backbone", False, False),
                              custom_ops=None, verbose=False)
@@ -128,4 +129,3 @@ if __name__ == "__main__":
         seq_dict = merge_template_search([oup_t1, oup_t2, oup_s])
         # evaluate the model properties
         evaluate(model, search, seq_dict, run_box_head=True, run_cls_head=True)
-

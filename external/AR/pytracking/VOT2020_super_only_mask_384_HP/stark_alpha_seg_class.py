@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
 import cv2
 import torch
 import vot
@@ -58,15 +57,13 @@ class STARK_ALPHA_SEG(object):
 
 
 def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False):
-
     torch.set_num_threads(1)
     # torch.cuda.set_device(CUDA_ID)  # set GPU id
-    # save_root = os.path.join('/media/masterbin-iiau/WIN_SSD/vot20_debug',para_name)
-    save_root = os.path.join('/data/sda/v-yanbi/iccv21/LittleBoy/vot20/vot20_debug', para_name)
+    save_root = os.path.join('<SAVE_DIR>', para_name)
     if VIS and (not os.path.exists(save_root)):
         os.makedirs(save_root)
     tracker = STARK_ALPHA_SEG(tracker_name=tracker_name, para_name=para_name,
-                          refine_model_name=refine_model_name, threshold=threshold)
+                              refine_model_name=refine_model_name, threshold=threshold)
     handle = vot.VOT("mask")
     selection = handle.region()
     imagefile = handle.frame()
@@ -75,7 +72,7 @@ def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False
     if VIS:
         '''for vis'''
         seq_name = imagefile.split('/')[-3]
-        save_v_dir = os.path.join(save_root,seq_name)
+        save_v_dir = os.path.join(save_root, seq_name)
         if not os.path.exists(save_v_dir):
             os.mkdir(save_v_dir)
         cur_time = int(time.time() % 10000)
@@ -83,7 +80,7 @@ def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-    image = cv2.cvtColor(cv2.imread(imagefile), cv2.COLOR_BGR2RGB) # Right
+    image = cv2.cvtColor(cv2.imread(imagefile), cv2.COLOR_BGR2RGB)  # Right
     # mask given by the toolkit ends with the target (zero-padding to the right and down is needed)
     mask = make_full_size(selection, (image.shape[1], image.shape[0]))
     tracker.initialize(image, mask)
@@ -98,7 +95,7 @@ def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False
         if VIS:
             '''Visualization'''
             # original image
-            image_ori = image[:,:,::-1].copy() # RGB --> BGR
+            image_ori = image[:, :, ::-1].copy()  # RGB --> BGR
             image_name = imagefile.split('/')[-1]
             save_path = os.path.join(save_dir, image_name)
             cv2.imwrite(save_path, image_ori)
@@ -106,11 +103,11 @@ def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False
             image_b = image_ori.copy()
             cv2.rectangle(image_b, (int(b1[0]), int(b1[1])),
                           (int(b1[0] + b1[2]), int(b1[1] + b1[3])), (0, 0, 255), 2)
-            image_b_name = image_name.replace('.jpg','_bbox.jpg')
+            image_b_name = image_name.replace('.jpg', '_bbox.jpg')
             save_path = os.path.join(save_dir, image_b_name)
             cv2.imwrite(save_path, image_b)
             # search region
-            search_bgr = search[:,:,::-1].copy()
+            search_bgr = search[:, :, ::-1].copy()
             search_name = image_name.replace('.jpg', '_search.jpg')
             save_path = os.path.join(save_dir, search_name)
             cv2.imwrite(save_path, search_bgr)
@@ -120,7 +117,7 @@ def run_vot_exp(tracker_name, para_name, refine_model_name, threshold, VIS=False
             search_bgr_m[:, :, 2] += 127.0 * search_m
             contours, _ = cv2.findContours(search_m, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             search_bgr_m = cv2.drawContours(search_bgr_m, contours, -1, (0, 255, 255), 4)
-            search_bgr_m = search_bgr_m.clip(0,255).astype(np.uint8)
+            search_bgr_m = search_bgr_m.clip(0, 255).astype(np.uint8)
             search_name_m = image_name.replace('.jpg', '_search_mask.jpg')
             save_path = os.path.join(save_dir, search_name_m)
             cv2.imwrite(save_path, search_bgr_m)
