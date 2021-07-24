@@ -8,7 +8,8 @@ and use ONNXRUNTIME to further accelerate the inference. The accelerated STARK-L
 |DiMP50|56.8|~50|165|
 |DaSiamRPN|41.5|~200|362|
 |SiamFC|33.6|~100|8.9|
-STARK-Lightning achieves better performance than DiMP50, runs at a competitive speed as DaSiamRPN, and has a smaller model size than SiamFC!
+
+STARK-Lightning achieves better performance than DiMP50, runs at a competitive speed as DaSiamRPN :zap: , and has a smaller model size than SiamFC!
 ## (Optionally) Train STARK-Lightning
 Train STARK-Lightning with 8 GPUs with the following command
 ```

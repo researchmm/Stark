@@ -8,6 +8,7 @@
 |DiMP50|56.8|~50|165|
 |DaSiamRPN|41.5|~200|362|
 |SiamFC|33.6|~100|8.9|
+
 STARK-Lightning取得了比DiMP50更强的性能，运行速度和DaSiamRPN一样快 :zap: ，而模型大小比SiamFC还要更小一些！
 ## (非必须) 训练 STARK-Lightning
 运行下面的指令，可8卡并行训练
