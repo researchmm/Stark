@@ -96,8 +96,6 @@ python tracking/train.py --script stark_st2 --config baseline --save_dir . --mod
 # STARK-ST101
 python tracking/train.py --script stark_st1 --config baseline_R101 --save_dir . --mode multiple --nproc_per_node 8  # STARK-ST101 Stage1
 python tracking/train.py --script stark_st2 --config baseline_R101 --save_dir . --mode multiple --nproc_per_node 8 --script_prv stark_st1 --config_prv baseline_R101  # STARK-ST101 Stage2
-# STARK-Lightning
-python tracking/train.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5 --save_dir . --mode multiple --nproc_per_node 8  # STARK-Lightning
 ```
 (Optionally) Debugging training with a single GPU
 ```

@@ -1,6 +1,20 @@
 # STARK-Lightning Tutorial
 **Introduction**：[ONNXRUNTIME](https://github.com/microsoft/onnxruntime) is an open-source library by Microsoft for network inference acceleration. In this tutorial, we will show how to export the trained model to ONNX format 
-and use ONNXRUNTIME to further accelerate the inference. The accelerated STARK-Lightning can run at 200~300 FPS on a RTX TITAN GPU! let's get started. 
+and use ONNXRUNTIME to further accelerate the inference. The accelerated STARK-Lightning can run at 200+ FPS on a RTX TITAN GPU! let's get started. 
+## STARK-Lightning v.s Other Trackers
+| Tracker | LaSOT (AUC)| Speed (FPS) | Params (MB)|
+|---|---|---|---|
+|**STARK-Lightning**|**58.2**|**~200**|**8.2**|
+|DiMP50|56.8|~50|165|
+|DaSiamRPN|41.5|~200|362|
+|SiamFC|33.6|~100|8.9|
+STARK-Lightning achieves better performance than DiMP50, runs at a competitive speed as DaSiamRPN, and has a smaller model size than SiamFC!
+## (Optionally) Train STARK-Lightning
+Train STARK-Lightning with 8 GPUs with the following command
+```
+python tracking/train.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5 --save_dir . --mode multiple --nproc_per_node 8
+```
+Since the training of STARK-Lightning is fast and memory-friendly, you can also train it with less GPUs (such as 2 or 4) by set ```nproc_per_node``` accordingly.  
 ## Install onnx and onnxruntime
 for inference on GPU
 ```

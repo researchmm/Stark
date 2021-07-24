@@ -85,7 +85,7 @@ pip install git+https://github.com/votchallenge/vot-toolkit-python
 echo ""
 echo ""
 echo "****************** Installing onnx and onnxruntime-gpu ******************"
-pip install onnx onnxruntime-gpu==1.5.1
+pip install onnx onnxruntime-gpu==1.6.0
 
 echo ""
 echo ""
