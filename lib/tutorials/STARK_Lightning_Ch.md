@@ -34,4 +34,6 @@ python tracking/test.py stark_lightning_X_trt baseline_rephead_4_lite_search5 --
 python tracking/test.py stark_lightning_X_trt baseline_rephead_4_lite_search5 --threads 0 --num_gpus 1
 ```
 - 评估跟踪指标
-```python tracking/analysis_results_ITP.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5```
+```
+python tracking/analysis_results_ITP.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5
+```

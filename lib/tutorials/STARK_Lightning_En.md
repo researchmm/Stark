@@ -35,5 +35,6 @@ If the user want to run the sequences one by one, you can run the following comm
 python tracking/test.py stark_lightning_X_trt baseline_rephead_4_lite_search5 --threads 0 --num_gpus 1
 ```
 - Evaluate the tracking results
-```python tracking/analysis_results_ITP.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5```
-
+```
+python tracking/analysis_results_ITP.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5
+```
