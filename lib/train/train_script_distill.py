@@ -11,8 +11,6 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .base_functions import *
 # network related
 from lib.models.stark import build_starks, build_starkst
-from lib.models.stark import build_starksplus, build_starksplussp, build_starkstplussp
-from lib.models.stark import build_stark_lightning, build_stark_lightning_x
 from lib.models.stark import build_stark_lightning_x_trt
 # forward propagation related
 from lib.train.actors import STARKLightningXtrtdistillActor
@@ -26,16 +24,6 @@ def build_network(script_name, cfg):
         net = build_starks(cfg)
     elif script_name == "stark_st1" or script_name == "stark_st2":
         net = build_starkst(cfg)
-    elif script_name == "stark_s_plus":
-        net = build_starksplus(cfg)
-    elif script_name == "stark_s_plus_sp":
-        net = build_starksplussp(cfg)
-    elif script_name in ["stark_st1_plus_sp", "stark_st2_plus_sp"]:
-        net = build_starkstplussp(cfg)
-    elif script_name == "stark_lightning":
-        net = build_stark_lightning(cfg)
-    elif script_name == "stark_lightning_X":
-        net = build_stark_lightning_x(cfg, phase='train')
     elif script_name == "stark_lightning_X_trt":
         net = build_stark_lightning_x_trt(cfg, phase="train")
     else:

@@ -11,13 +11,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .base_functions import *
 # network related
 from lib.models.stark import build_starks, build_starkst
-from lib.models.stark import build_starksplus, build_starksplussp, build_starkstplussp
-from lib.models.stark import build_stark_lightning, build_stark_lightning_x
 from lib.models.stark import build_stark_lightning_x_trt
 # forward propagation related
 from lib.train.actors import STARKSActor, STARKSTActor
-from lib.train.actors import STARKSPLUSActor, STARKSPLUSSPActor, STARKSTPLUSSPActor, STARKSTPLUSSPActor_debug
-from lib.train.actors import STARKLightningXActor, STARKLightningXtrtActor
+from lib.train.actors import STARKLightningXtrtActor
 # for import modules
 import importlib
 
@@ -58,16 +55,6 @@ def run(settings):
         net = build_starks(cfg)
     elif settings.script_name == "stark_st1" or settings.script_name == "stark_st2":
         net = build_starkst(cfg)
-    elif settings.script_name == "stark_s_plus":
-        net = build_starksplus(cfg)
-    elif settings.script_name == "stark_s_plus_sp":
-        net = build_starksplussp(cfg)
-    elif settings.script_name in ["stark_st1_plus_sp", "stark_st2_plus_sp"]:
-        net = build_starkstplussp(cfg)
-    elif settings.script_name == "stark_lightning":
-        net = build_stark_lightning(cfg)
-    elif settings.script_name == "stark_lightning_X":
-        net = build_stark_lightning_x(cfg, phase='train')
     elif settings.script_name == "stark_lightning_X_trt":
         net = build_stark_lightning_x_trt(cfg, phase="train")
     else:
@@ -92,22 +79,6 @@ def run(settings):
         objective = {'cls': BCEWithLogitsLoss()}
         loss_weight = {'cls': 1.0}
         actor = STARKSTActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
-    elif settings.script_name == "stark_s_plus":
-        objective = {'giou': giou_loss, 'l1': l1_loss}
-        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
-        actor = STARKSPLUSActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
-    elif settings.script_name in ["stark_s_plus_sp", "stark_st1_plus_sp", "stark_lightning"]:
-        objective = {'giou': giou_loss, 'l1': l1_loss}
-        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
-        actor = STARKSPLUSSPActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
-    elif settings.script_name == "stark_st2_plus_sp":
-        objective = {'cls': BCEWithLogitsLoss()}
-        loss_weight = {'cls': 1.0}
-        actor = STARKSTPLUSSPActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
-    elif settings.script_name == "stark_lightning_X":
-        objective = {'giou': giou_loss, 'l1': l1_loss}
-        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
-        actor = STARKLightningXActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
     elif settings.script_name == "stark_lightning_X_trt":
         objective = {'giou': giou_loss, 'l1': l1_loss}
         loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
