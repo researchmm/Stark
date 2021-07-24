@@ -11,8 +11,13 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .base_functions import *
 # network related
 from lib.models.stark import build_starks, build_starkst
+from lib.models.stark import build_starksplus, build_starksplussp, build_starkstplussp
+from lib.models.stark import build_stark_lightning, build_stark_lightning_x
+from lib.models.stark import build_stark_lightning_x_trt
 # forward propagation related
 from lib.train.actors import STARKSActor, STARKSTActor
+from lib.train.actors import STARKSPLUSActor, STARKSPLUSSPActor, STARKSTPLUSSPActor, STARKSTPLUSSPActor_debug
+from lib.train.actors import STARKLightningXActor, STARKLightningXtrtActor
 # for import modules
 import importlib
 
@@ -45,11 +50,26 @@ def run(settings):
     # Build dataloaders
     loader_train, loader_val = build_dataloaders(cfg, settings)
 
+    if "RepVGG" in cfg.MODEL.BACKBONE.TYPE or "swin" in cfg.MODEL.BACKBONE.TYPE or "LightTrack" in cfg.MODEL.BACKBONE.TYPE:
+        cfg.ckpt_dir = settings.save_dir
+
     # Create network
     if settings.script_name == "stark_s":
         net = build_starks(cfg)
     elif settings.script_name == "stark_st1" or settings.script_name == "stark_st2":
         net = build_starkst(cfg)
+    elif settings.script_name == "stark_s_plus":
+        net = build_starksplus(cfg)
+    elif settings.script_name == "stark_s_plus_sp":
+        net = build_starksplussp(cfg)
+    elif settings.script_name in ["stark_st1_plus_sp", "stark_st2_plus_sp"]:
+        net = build_starkstplussp(cfg)
+    elif settings.script_name == "stark_lightning":
+        net = build_stark_lightning(cfg)
+    elif settings.script_name == "stark_lightning_X":
+        net = build_stark_lightning_x(cfg, phase='train')
+    elif settings.script_name == "stark_lightning_X_trt":
+        net = build_stark_lightning_x_trt(cfg, phase="train")
     else:
         raise ValueError("illegal script name")
 
@@ -60,7 +80,9 @@ def run(settings):
         settings.device = torch.device("cuda:%d" % settings.local_rank)
     else:
         settings.device = torch.device("cuda:0")
-
+    settings.deep_sup = getattr(cfg.TRAIN, "DEEP_SUPERVISION", False)
+    settings.distill = getattr(cfg.TRAIN, "DISTILL", False)
+    settings.distill_loss_type = getattr(cfg.TRAIN, "DISTILL_LOSS_TYPE", "KL")
     # Loss functions and Actors
     if settings.script_name == "stark_s" or settings.script_name == "stark_st1":
         objective = {'giou': giou_loss, 'l1': l1_loss}
@@ -70,19 +92,39 @@ def run(settings):
         objective = {'cls': BCEWithLogitsLoss()}
         loss_weight = {'cls': 1.0}
         actor = STARKSTActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
+    elif settings.script_name == "stark_s_plus":
+        objective = {'giou': giou_loss, 'l1': l1_loss}
+        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
+        actor = STARKSPLUSActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
+    elif settings.script_name in ["stark_s_plus_sp", "stark_st1_plus_sp", "stark_lightning"]:
+        objective = {'giou': giou_loss, 'l1': l1_loss}
+        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
+        actor = STARKSPLUSSPActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
+    elif settings.script_name == "stark_st2_plus_sp":
+        objective = {'cls': BCEWithLogitsLoss()}
+        loss_weight = {'cls': 1.0}
+        actor = STARKSTPLUSSPActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
+    elif settings.script_name == "stark_lightning_X":
+        objective = {'giou': giou_loss, 'l1': l1_loss}
+        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
+        actor = STARKLightningXActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
+    elif settings.script_name == "stark_lightning_X_trt":
+        objective = {'giou': giou_loss, 'l1': l1_loss}
+        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT}
+        actor = STARKLightningXtrtActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings)
     else:
         raise ValueError("illegal script name")
 
-    if cfg.TRAIN.DEEP_SUPERVISION:
-        raise ValueError("Deep supervision is not supported now.")
+    # if cfg.TRAIN.DEEP_SUPERVISION:
+    #     raise ValueError("Deep supervision is not supported now.")
 
     # Optimizer, parameters, and learning rates
     optimizer, lr_scheduler = get_optimizer_scheduler(net, cfg)
-
-    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler)
+    use_amp = getattr(cfg.TRAIN, "AMP", False)
+    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler, use_amp=use_amp)
 
     # train process
-    if settings.script_name == "stark_st2":
+    if settings.script_name in ["stark_st2", "stark_st2_plus_sp"]:
         trainer.train(cfg.TRAIN.EPOCH, load_latest=True, fail_safe=True, load_previous_ckpt=True)
     else:
         trainer.train(cfg.TRAIN.EPOCH, load_latest=True, fail_safe=True)

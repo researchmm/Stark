@@ -24,7 +24,8 @@ def init_seeds(seed):
 
 
 def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, save_dir=None, base_seed=None,
-                 use_lmdb=False, script_name_prv=None, config_name_prv=None):
+                 use_lmdb=False, script_name_prv=None, config_name_prv=None,
+                 distill=None, script_teacher=None, config_teacher=None):
     """Run the train script.
     args:
         script_name: Name of emperiment in the "experiments/" folder.
@@ -58,8 +59,16 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
     settings.use_lmdb = use_lmdb
     prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
     settings.cfg_file = os.path.join(prj_dir, 'experiments/%s/%s.yaml' % (script_name, config_name))
-
-    expr_module = importlib.import_module('lib.train.train_script')
+    if distill:
+        settings.distill = distill
+        settings.script_teacher = script_teacher
+        settings.config_teacher = config_teacher
+        if script_teacher is not None and config_teacher is not None:
+            settings.project_path_teacher = 'train/{}/{}'.format(script_teacher, config_teacher)
+        settings.cfg_file_teacher = os.path.join(prj_dir, 'experiments/%s/%s.yaml' % (script_teacher, config_teacher))
+        expr_module = importlib.import_module('lib.train.train_script_distill')
+    else:
+        expr_module = importlib.import_module('lib.train.train_script')
     expr_func = getattr(expr_module, 'run')
 
     expr_func(settings)
@@ -76,6 +85,11 @@ def main():
     parser.add_argument('--use_lmdb', type=int, choices=[0, 1], default=0)  # whether datasets are in lmdb format
     parser.add_argument('--script_prv', type=str, default=None, help='Name of the train script of previous model.')
     parser.add_argument('--config_prv', type=str, default=None, help="Name of the config file of previous model.")
+    # for knowledge distillation
+    parser.add_argument('--distill', type=int, choices=[0, 1], default=0)  # whether to use knowledge distillation
+    parser.add_argument('--script_teacher', type=str, help='teacher script name')
+    parser.add_argument('--config_teacher', type=str, help='teacher yaml configure file name')
+
     args = parser.parse_args()
     if args.local_rank != -1:
         dist.init_process_group(backend='nccl')
@@ -84,7 +98,8 @@ def main():
         torch.cuda.set_device(0)
     run_training(args.script, args.config, cudnn_benchmark=args.cudnn_benchmark,
                  local_rank=args.local_rank, save_dir=args.save_dir, base_seed=args.seed,
-                 use_lmdb=args.use_lmdb, script_name_prv=args.script_prv, config_name_prv=args.config_prv)
+                 use_lmdb=args.use_lmdb, script_name_prv=args.script_prv, config_name_prv=args.config_prv,
+                 distill=args.distill, script_teacher=args.script_teacher, config_teacher=args.config_teacher)
 
 
 if __name__ == '__main__':

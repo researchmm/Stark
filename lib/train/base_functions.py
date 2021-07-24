@@ -5,6 +5,7 @@ from lib.train.dataset import Lasot, Got10k, MSCOCOSeq, ImagenetVID, TrackingNet
 from lib.train.dataset import Lasot_lmdb, Got10k_lmdb, MSCOCOSeq_lmdb, ImagenetVID_lmdb, TrackingNet_lmdb
 from lib.train.data import sampler, opencv_loader, processing, LTRLoader
 import lib.train.data.transforms as tfm
+from lib.utils.misc import is_main_process
 
 
 def update_settings(settings, cfg):
@@ -147,11 +148,11 @@ def get_optimizer_scheduler(net, cfg):
     if train_cls:
         print("Only training classification head. Learnable parameters are shown below.")
         param_dicts = [
-            {"params": [p for n, p in net.named_parameters() if "cls_head" in n and p.requires_grad]}
+            {"params": [p for n, p in net.named_parameters() if "cls" in n and p.requires_grad]}
         ]
 
         for n, p in net.named_parameters():
-            if "cls_head" not in n:
+            if "cls" not in n:
                 p.requires_grad = False
             else:
                 print(n)
@@ -163,6 +164,11 @@ def get_optimizer_scheduler(net, cfg):
                 "lr": cfg.TRAIN.LR * cfg.TRAIN.BACKBONE_MULTIPLIER,
             },
         ]
+        if is_main_process():
+            print("Learnable parameters are shown below.")
+            for n, p in net.named_parameters():
+                if p.requires_grad:
+                    print(n)
 
     if cfg.TRAIN.OPTIMIZER == "ADAMW":
         optimizer = torch.optim.AdamW(param_dicts, lr=cfg.TRAIN.LR,

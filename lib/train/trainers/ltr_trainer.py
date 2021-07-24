@@ -6,10 +6,12 @@ from lib.train.admin import TensorboardWriter
 import torch
 import time
 from torch.utils.data.distributed import DistributedSampler
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler
 
 
 class LTRTrainer(BaseTrainer):
-    def __init__(self, actor, loaders, optimizer, settings, lr_scheduler=None):
+    def __init__(self, actor, loaders, optimizer, settings, lr_scheduler=None, use_amp=False):
         """
         args:
             actor - The actor for training the network
@@ -35,6 +37,9 @@ class LTRTrainer(BaseTrainer):
 
         self.move_data_to_gpu = getattr(settings, 'move_data_to_gpu', True)
         self.settings = settings
+        self.use_amp = use_amp
+        if use_amp:
+            self.scaler = GradScaler()
 
     def _set_default_settings(self):
         # Dict of all default values
@@ -62,15 +67,24 @@ class LTRTrainer(BaseTrainer):
             data['epoch'] = self.epoch
             data['settings'] = self.settings
             # forward pass
-            loss, stats = self.actor(data)
+            if not self.use_amp:
+                loss, stats = self.actor(data)
+            else:
+                with autocast():
+                    loss, stats = self.actor(data)
 
             # backward pass and update weights
             if loader.training:
                 self.optimizer.zero_grad()
-                loss.backward()
-                if self.settings.grad_clip_norm > 0:
-                    torch.nn.utils.clip_grad_norm_(self.actor.net.parameters(), self.settings.grad_clip_norm)
-                self.optimizer.step()
+                if not self.use_amp:
+                    loss.backward()
+                    if self.settings.grad_clip_norm > 0:
+                        torch.nn.utils.clip_grad_norm_(self.actor.net.parameters(), self.settings.grad_clip_norm)
+                    self.optimizer.step()
+                else:
+                    self.scaler.scale(loss).backward()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
 
             # update statistics
             batch_size = data['template_images'].shape[loader.stack_dim]

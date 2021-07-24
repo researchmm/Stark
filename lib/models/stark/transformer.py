@@ -14,6 +14,7 @@ from typing import Optional, List
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
+import time
 
 
 def check_inf(tensor):
@@ -116,17 +117,62 @@ class TransformerEncoder(nn.Module):
     def forward(self, src,
                 mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None,
-                pos: Optional[Tensor] = None):
-        output = src
+                pos: Optional[Tensor] = None,
+                return_intermediate=False):
+        if return_intermediate:
+            output_list = []
+            output = src
 
-        for layer in self.layers:
-            output = layer(output, src_mask=mask,
-                           src_key_padding_mask=src_key_padding_mask, pos=pos)
+            for layer in self.layers:
+                output = layer(output, src_mask=mask,
+                               src_key_padding_mask=src_key_padding_mask, pos=pos)
+                if self.norm is None:
+                    output_list.append(output)
+            if self.norm is not None:
+                output = self.norm(output)
+                output_list.append(output)
+            return output_list
+        else:
+            output = src
 
-        if self.norm is not None:
-            output = self.norm(output)
+            for layer in self.layers:
+                output = layer(output, src_mask=mask,
+                               src_key_padding_mask=src_key_padding_mask, pos=pos)
 
-        return output
+            if self.norm is not None:
+                output = self.norm(output)
+
+            return output
+
+
+class TransformerEncoderLite(nn.Module):
+
+    def __init__(self, encoder_layer, num_layers, norm=None):
+        super().__init__()
+        self.layers = _get_clones(encoder_layer, num_layers)
+        self.num_layers = num_layers
+        self.norm = norm
+        assert self.num_layers == 1
+
+    def forward(self, seq_dict, return_intermediate=False, part_att=False):
+        if return_intermediate:
+            output_list = []
+
+            # for layer in self.layers:
+            output = self.layers[-1](seq_dict, part_att=part_att)
+            if self.norm is None:
+                output_list.append(output)
+            if self.norm is not None:
+                output = self.norm(output)
+                output_list.append(output)
+            return output_list
+        else:
+            output = self.layers[-1](seq_dict, part_att=part_att)
+
+            if self.norm is not None:
+                output = self.norm(output)
+
+            return output
 
 
 class TransformerDecoder(nn.Module):
@@ -235,6 +281,68 @@ class TransformerEncoderLayer(nn.Module):
         if self.normalize_before:
             return self.forward_pre(src, src_mask, src_key_padding_mask, pos)
         return self.forward_post(src, src_mask, src_key_padding_mask, pos)
+
+
+class TransformerEncoderLayerLite(nn.Module):
+    """search region features as queries, concatenated features as keys and values"""
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
+                 activation="relu", normalize_before=False, divide_norm=False):
+        super().__init__()
+        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
+        # Implementation of Feedforward model
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
+        self.dropout = nn.Dropout(dropout)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
+
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+
+        self.activation = _get_activation_fn(activation)
+        self.normalize_before = normalize_before  # first normalization, then add
+
+        self.divide_norm = divide_norm
+        self.scale_factor = float(d_model // nhead) ** 0.5
+
+    def with_pos_embed(self, tensor, pos: Optional[Tensor]):
+        return tensor if pos is None else tensor + pos
+
+    def forward_post(self, seq_dict, part_att=False):
+        """
+        seq_dict: sequence dict of both the search region and the template (concatenated)
+        """
+        if part_att:
+            # print("using part attention")
+            q = self.with_pos_embed(seq_dict["feat_x"], seq_dict["pos_x"])  # search region as query
+            k = self.with_pos_embed(seq_dict["feat_z"], seq_dict["pos_z"])  # template as key
+            v = seq_dict["feat_z"]
+            key_padding_mask = seq_dict["mask_z"]
+            # print(q.size(), k.size(), v.size())
+        else:
+            q = self.with_pos_embed(seq_dict["feat_x"], seq_dict["pos_x"])  # search region as query
+            k = self.with_pos_embed(seq_dict["feat"], seq_dict["pos"])  # concat as key
+            v = seq_dict["feat"]
+            key_padding_mask = seq_dict["mask"]
+        if self.divide_norm:
+            raise ValueError("divide norm is not supported.")
+        # s = time.time()
+        src2 = self.self_attn(q, k, value=v, key_padding_mask=key_padding_mask)[0]
+        src = q + self.dropout1(src2)
+        src = self.norm1(src)
+        # e1 = time.time()
+        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
+        src = src + self.dropout2(src2)
+        src = self.norm2(src)
+        # e2 = time.time()
+        # print("self-attention time: %.1f" % ((e1-s) * 1000))
+        # print("MLP time: %.1f" % ((e2-e1) * 1000))
+        return src
+
+    def forward(self, seq_dict, part_att=False):
+        if self.normalize_before:
+            raise ValueError("PRE-NORM is not supported now")
+        return self.forward_post(seq_dict, part_att=part_att)
 
 
 class TransformerDecoderLayer(nn.Module):
