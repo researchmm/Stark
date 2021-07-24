@@ -35,6 +35,7 @@ STARK is implemented purely based on the PyTorch.
 - We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
   Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC! 
   More details can be found at [STARK_Lightning_En.md](lib/tutorials/STARK_Lightning_En.md)/[中文教程](lib/tutorials/STARK_Lightning_Ch.md)
+
 **July 23, 2021**
 - STARK is accepted by ICCV2021
 
