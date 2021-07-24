@@ -3,7 +3,7 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-got-10k)](https://paperswithcode.com/sota/visual-object-tracking-on-got-10k?p=learning-spatio-temporal-transformer-for)  
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-trackingnet)](https://paperswithcode.com/sota/visual-object-tracking-on-trackingnet?p=learning-spatio-temporal-transformer-for)
 
-The official implementation of the paper [**Learning Spatio-Temporal Transformer for Visual Tracking**](https://arxiv.org/abs/2103.17154)
+The official implementation of the ICCV2021 paper [**Learning Spatio-Temporal Transformer for Visual Tracking**](https://arxiv.org/abs/2103.17154)
 
 Hiring research interns for visual transformer projects: houwen.peng@microsoft.com
 
@@ -30,12 +30,21 @@ STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesl
 
 STARK is implemented purely based on the PyTorch. 
 
+## What's new
+**July 24, 2021**
+- We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
+  Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC!
+- We release a more powerful version of STARK with Swin Transformer as its backbone. 
+
+**July 23, 2021**
+- STARK is accepted by ICCV2021
+
 ## Install the environment
 **Option1**: Use the Anaconda
 ```
 conda create -n stark python=3.6
 conda activate stark
-bash install.sh
+bash install_pytorch17.sh
 ```
 **Option2**: Use the docker file
 
@@ -65,6 +74,7 @@ Put the tracking datasets in ./data. It should look like:
             |-- TRAIN_11
             |-- TEST
    ```
+## Set project paths
 Run the following command to set paths for this project
 ```
 python tracking/create_default_local_file.py --workspace_dir . --data_dir ./data --save_dir .
@@ -129,6 +139,8 @@ python tracking/profile_model.py --script stark_s --config baseline
 python tracking/profile_model.py --script stark_st2 --config baseline
 # Profiling STARK-ST101 model
 python tracking/profile_model.py --script stark_st2 --config baseline_R101
+# Profiling STARK-Lightning-X-trt
+python tracking/profile_model_lightning_X_trt.py
 ```
 
 ## Model Zoo
