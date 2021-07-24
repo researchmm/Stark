@@ -11,7 +11,7 @@ from lib.utils.box_ops import clip_box
 from lib.models.stark.repvgg import repvgg_model_convert
 # for onnxruntime
 from lib.test.tracker.stark_utils import PreprocessorX_onnx
-# import onnxruntime
+import onnxruntime
 import multiprocessing
 
 
@@ -170,7 +170,7 @@ class STARK_LightningXtrt_onnx(BaseTracker):
 
 
 def get_tracker_class():
-    use_onnx = False
+    use_onnx = True
     if use_onnx:
         print("Using onnx model")
         return STARK_LightningXtrt_onnx

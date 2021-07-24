@@ -20,7 +20,7 @@ from lib.test.evaluation.environment import env_settings
 def parse_args():
     parser = argparse.ArgumentParser(description='Parse args for training')
     parser.add_argument('--script', type=str, default='stark_lightning_X_trt', help='script name')
-    parser.add_argument('--config', type=str, default='baseline_rephead', help='yaml configure file name')
+    parser.add_argument('--config', type=str, default='baseline_rephead_4_lite_search5', help='yaml configure file name')
     args = parser.parse_args()
     return args
 
@@ -112,6 +112,7 @@ if __name__ == "__main__":
     sz_x = cfg.TEST.SEARCH_SIZE
     hw_z = cfg.DATA.TEMPLATE.FEAT_SIZE ** 2
     c = cfg.MODEL.HIDDEN_DIM
+    print(bs, sz_x, hw_z, c)
     img_x, mask_x, feat_vec_z, mask_vec_z, pos_vec_z = get_data(bs=bs, sz_x=sz_x, hw_z=hw_z, c=c)
     torch_outs = torch_model(img_x, mask_x, feat_vec_z, mask_vec_z, pos_vec_z)
     torch.onnx.export(torch_model,  # model being run

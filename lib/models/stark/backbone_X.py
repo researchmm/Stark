@@ -10,7 +10,6 @@ from lib.models.stark import resnet as resnet_module
 from lib.models.stark.repvgg import get_RepVGG_func_by_name
 import os
 from .swin_transformer import build_swint
-from .lighttrack.childnet import build_subnet
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -135,8 +134,9 @@ def build_backbone_x_cnn(cfg, phase='train'):
                         ckpt_new[k_new] = v
                 ckpt = ckpt_new
             missing_keys, unexpected_keys = backbone.body.load_state_dict(ckpt, strict=False)
-            print("missing keys:", missing_keys)
-            print("unexpected keys:", unexpected_keys)
+            if is_main_process():
+                print("missing keys:", missing_keys)
+                print("unexpected keys:", unexpected_keys)
 
         """freeze some layers"""
         if cfg.MODEL.BACKBONE.TYPE != "LightTrack":

@@ -18,7 +18,7 @@ from lib.test.evaluation.environment import env_settings
 def parse_args():
     parser = argparse.ArgumentParser(description='Parse args for training')
     parser.add_argument('--script', type=str, default='stark_lightning_X_trt', help='script name')
-    parser.add_argument('--config', type=str, default='baseline_rephead', help='yaml configure file name')
+    parser.add_argument('--config', type=str, default='baseline_rephead_4_lite_search5', help='yaml configure file name')
     args = parser.parse_args()
     return args
 
@@ -114,6 +114,9 @@ if __name__ == "__main__":
     ort_inputs = {'img_z': to_numpy(img_z),
                   'mask_z': to_numpy(mask_z)}
     # print(onnxruntime.get_device())
+    # warmup
+    for i in range(10):
+        ort_outs = ort_session.run(None, ort_inputs)
     s = time.time()
     for i in range(N):
         ort_outs = ort_session.run(None, ort_inputs)

@@ -33,7 +33,7 @@ STARK is implemented purely based on the PyTorch.
 ## What's new
 **July 24, 2021**
 - We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
-  Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC!
+  Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC! More details can be found at [STARK_Lightning_En.md](lib/tutorials/STARK_Lightning_En.md)/[中文教程](lib/tutorials/STARK_Lightning_En.md)
 **July 23, 2021**
 - STARK is accepted by ICCV2021
 
@@ -94,6 +94,8 @@ python tracking/train.py --script stark_st2 --config baseline --save_dir . --mod
 # STARK-ST101
 python tracking/train.py --script stark_st1 --config baseline_R101 --save_dir . --mode multiple --nproc_per_node 8  # STARK-ST101 Stage1
 python tracking/train.py --script stark_st2 --config baseline_R101 --save_dir . --mode multiple --nproc_per_node 8 --script_prv stark_st1 --config_prv baseline_R101  # STARK-ST101 Stage2
+# STARK-Lightning
+python tracking/train.py --script stark_lightning_X_trt --config baseline_rephead_4_lite_search5 --save_dir . --mode multiple --nproc_per_node 8  # STARK-Lightning
 ```
 (Optionally) Debugging training with a single GPU
 ```
