@@ -251,7 +251,7 @@ class TransformerEncoderLayer(nn.Module):
             # print("encoder divide by norm")
             q = q / torch.norm(q, dim=-1, keepdim=True) * self.scale_factor
             k = k / torch.norm(k, dim=-1, keepdim=True)
-        src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
+        src2 = self.self_attn(q, k, src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src = self.norm1(src)
@@ -385,7 +385,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.divide_norm:
             q = q / torch.norm(q, dim=-1, keepdim=True) * self.scale_factor
             k = k / torch.norm(k, dim=-1, keepdim=True)
-        tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
+        tgt2 = self.self_attn(q, k, tgt, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
         tgt = self.norm1(tgt)
@@ -394,9 +394,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.divide_norm:
             queries = queries / torch.norm(queries, dim=-1, keepdim=True) * self.scale_factor
             keys = keys / torch.norm(keys, dim=-1, keepdim=True)
-        tgt2 = self.multihead_attn(query=queries,
-                                   key=keys,
-                                   value=memory, attn_mask=memory_mask,
+        tgt2 = self.multihead_attn(queries, keys, memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)

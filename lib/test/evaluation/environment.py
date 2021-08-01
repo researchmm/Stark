@@ -60,9 +60,9 @@ class EnvSettings_ITP:
         self.segmentation_path = os.path.join(save_dir, 'test/segmentation_results')
         self.network_path = os.path.join(save_dir, 'test/networks')
         self.result_plot_path = os.path.join(save_dir, 'test/result_plots')
-        self.otb_path = ''
-        self.nfs_path = ''
-        self.uav_path = ''
+        self.otb_path = os.path.join(data_dir, 'OTB2015')
+        self.nfs_path = os.path.join(data_dir, 'nfs')
+        self.uav_path = os.path.join(data_dir, 'UAV123')
         self.tpl_path = ''
         self.vot_path = os.path.join(data_dir, 'VOT2019')
         self.got10k_path = os.path.join(data_dir, 'got10k')

@@ -49,7 +49,7 @@ class Tracker:
         else:
             self.results_dir = '{}/{}/{}_{:03d}'.format(env.results_path, self.name, self.parameter_name, self.run_id)
         if result_only:
-            self.results_dir = '{}/{}/{}'.format(env.results_path, "LaSOT", self.name)
+            self.results_dir = '{}/{}'.format(env.results_path, self.name)
 
         tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                               '..', 'tracker', '%s.py' % self.name))

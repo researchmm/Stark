@@ -9,6 +9,7 @@ from thop import profile
 from thop.utils import clever_format
 import time
 import importlib
+from torch import nn
 
 
 def parse_args():
@@ -17,16 +18,33 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='Parse args for training')
     # for train
-    parser.add_argument('--script', type=str, default='stark_s', choices=['stark_s', 'stark_st2'],
+    parser.add_argument('--script', type=str, default='stark_st2', choices=['stark_s', 'stark_st2'],
                         help='training script name')
-    parser.add_argument('--config', type=str, default='baseline', help='yaml configure file name')
+    parser.add_argument('--config', type=str, default='baseline_R101', help='yaml configure file name')
     args = parser.parse_args()
 
     return args
 
 
+def get_complexity_MHA(m:nn.MultiheadAttention, x, y):
+    """(L, B, D): sequence length, batch size, dimension"""
+    d_mid = m.embed_dim
+    query, key, value = x[0], x[1], x[2]
+    Lq, batch, d_inp = query.size()
+    Lk = key.size(0)
+    """compute flops"""
+    total_ops = 0
+    # projection of Q, K, V
+    total_ops += d_inp * d_mid * Lq * batch  # query
+    total_ops += d_inp * d_mid * Lk * batch * 2  # key and value
+    # compute attention
+    total_ops += Lq * Lk * d_mid * 2
+    m.total_ops += torch.DoubleTensor([int(total_ops)])
+
+
 def evaluate(model, search, seq_dict, run_box_head, run_cls_head):
     """Compute FLOPs, Params, and Speed"""
+    custom_ops = {nn.MultiheadAttention: get_complexity_MHA}
     # # backbone
     macs1, params1 = profile(model, inputs=(search, None, "backbone", False, False),
                              custom_ops=None, verbose=False)
@@ -35,7 +53,7 @@ def evaluate(model, search, seq_dict, run_box_head, run_cls_head):
     print('backbone params is ', params)
     # transformer and head
     macs2, params2 = profile(model, inputs=(None, seq_dict, "transformer", True, True),
-                             custom_ops=None, verbose=False)
+                             custom_ops=custom_ops, verbose=False)
     macs, params = clever_format([macs2, params2], "%.3f")
     print('transformer and head macs is ', macs)
     print('transformer and head params is ', params)
