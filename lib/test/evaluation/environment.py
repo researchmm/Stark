@@ -63,6 +63,7 @@ class EnvSettings_ITP:
         self.otb_path = os.path.join(data_dir, 'OTB2015')
         self.nfs_path = os.path.join(data_dir, 'nfs')
         self.uav_path = os.path.join(data_dir, 'UAV123')
+        self.tc128_path = os.path.join(data_dir, 'TC128')
         self.tpl_path = ''
         self.vot_path = os.path.join(data_dir, 'VOT2019')
         self.got10k_path = os.path.join(data_dir, 'got10k')
