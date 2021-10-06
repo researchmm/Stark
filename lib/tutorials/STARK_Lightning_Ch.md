@@ -29,7 +29,7 @@ pip install onnx onnxruntime-gpu==1.6.0
 pip install onnx onnxruntime
 ```
 ## ONNX模型转换与推理测试
-下载训练好的PyTorch模型权重文件 [STARK_Lightning](https://drive.google.com/file/d/18xxbMKCjWi6Gvn5T4o2w5jIbwd3AWN55/view?usp=sharing)
+下载训练好的PyTorch模型权重文件 [STARK_Lightning](https://drive.google.com/file/d/1dVme6p-_j0fFcxYQ-rrF07pRuf57uPA-/view?usp=sharing)
 
 将训练好的PyTorch模型转换成onnx格式,并测试onnxruntime
 ```
