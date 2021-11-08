@@ -3,12 +3,15 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-got-10k)](https://paperswithcode.com/sota/visual-object-tracking-on-got-10k?p=learning-spatio-temporal-transformer-for)  
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-trackingnet)](https://paperswithcode.com/sota/visual-object-tracking-on-trackingnet?p=learning-spatio-temporal-transformer-for)
 
-The official implementation of the ICCV2021 paper [**Learning Spatio-Temporal Transformer for Visual Tracking**](https://arxiv.org/abs/2103.17154)
+The official implementation of the **ICCV2021** paper [**Learning Spatio-Temporal Transformer for Visual Tracking**](https://openaccess.thecvf.com/content/ICCV2021/papers/Yan_Learning_Spatio-Temporal_Transformer_for_Visual_Tracking_ICCV_2021_paper.pdf)
 
 Hiring research interns for visual transformer projects: houwen.peng@microsoft.com
 ## News
 - :trophy: **We are the Winner of VOT-21 RGB-D challenge** 
 - :trophy: **We won the Runner-ups in VOT-21 Real-Time and Long-term challenges**
+- We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
+  Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC! 
+  More details can be found at [STARK_Lightning_En.md](lib/tutorials/STARK_Lightning_En.md)/[中文教程](lib/tutorials/STARK_Lightning_Ch.md)
 
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
@@ -31,15 +34,6 @@ STARK-ST50 and STARK-ST101 run at **40FPS** and **30FPS** respectively on a Tesl
 ### Purely PyTorch-based Code
 
 STARK is implemented purely based on the PyTorch. 
-
-## What's new
-**July 24, 2021**
-- We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
-  Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC! 
-  More details can be found at [STARK_Lightning_En.md](lib/tutorials/STARK_Lightning_En.md)/[中文教程](lib/tutorials/STARK_Lightning_Ch.md)
-
-**July 23, 2021**
-- STARK is accepted by ICCV2021
 
 ## Install the environment
 **Option1**: Use the Anaconda
