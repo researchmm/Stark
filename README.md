@@ -6,7 +6,9 @@
 The official implementation of the ICCV2021 paper [**Learning Spatio-Temporal Transformer for Visual Tracking**](https://arxiv.org/abs/2103.17154)
 
 Hiring research interns for visual transformer projects: houwen.peng@microsoft.com
-
+## News
+- :trophy: **We are the Winner of VOT-21 RGB-D challenge** 
+- :trophy: **We won the Runner-ups in VOT-21 Real-Time and Long-term challenges**
 
 ![STARK_Framework](tracking/Framework.png)
 ## Highlights
