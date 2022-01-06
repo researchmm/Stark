@@ -18,7 +18,8 @@ from torch import Tensor
 
 # needed due to empty tensor bug in pytorch and torchvision 0.5
 import torchvision
-if float(torchvision.__version__[:3]) < 0.7:
+vers = torchvision.__version__.split('.')
+if int(vers[0]) <= 0 and int(vers[1]) < 7:
     from torchvision.ops import _new_empty_tensor
     from torchvision.ops.misc import _output_size
 
