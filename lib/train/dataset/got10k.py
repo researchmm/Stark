@@ -37,6 +37,7 @@ class Got10k(BaseVideoDataset):
             data_fraction - Fraction of dataset to be used. The complete dataset is used by default
         """
         root = env_settings().got10k_dir if root is None else root
+        root = os.path.join(root, 'train')
         super().__init__('GOT10k', root, image_loader)
 
         # all folders inside the root
@@ -57,12 +58,16 @@ class Got10k(BaseVideoDataset):
                 file_path = os.path.join(ltr_path, 'data_specs', 'got10k_vot_train_split.txt')
             elif split == 'votval':
                 file_path = os.path.join(ltr_path, 'data_specs', 'got10k_vot_val_split.txt')
+            elif split == 'fr_train':
+                file_path = os.path.join(ltr_path, 'data_specs', 'got10k_frisbee_train.txt')
+            elif split == 'fr_val':
+                file_path = os.path.join(ltr_path, 'data_specs', 'got10k_frisbee_val.txt')
             else:
                 raise ValueError('Unknown split name.')
             seq_ids = pandas.read_csv(file_path, header=None, squeeze=True, dtype=np.int64).values.tolist()
         elif seq_ids is None:
             seq_ids = list(range(0, len(self.sequence_list)))
-
+        print("len of sequences" + str(len(self.sequence_list)))
         self.sequence_list = [self.sequence_list[i] for i in seq_ids]
 
         if data_fraction is not None:
@@ -134,7 +139,7 @@ class Got10k(BaseVideoDataset):
         # Read full occlusion and out_of_view
         occlusion_file = os.path.join(seq_path, "absence.label")
         cover_file = os.path.join(seq_path, "cover.label")
-
+        #print('seq_path = ' + seq_path)
         with open(occlusion_file, 'r', newline='') as f:
             occlusion = torch.ByteTensor([int(v[0]) for v in csv.reader(f)])
         with open(cover_file, 'r', newline='') as f:

@@ -5,7 +5,6 @@ from lib.train.dataset import Lasot, Got10k, MSCOCOSeq, ImagenetVID, TrackingNet
 from lib.train.dataset import Lasot_lmdb, Got10k_lmdb, MSCOCOSeq_lmdb, ImagenetVID_lmdb, TrackingNet_lmdb
 from lib.train.data import sampler, opencv_loader, processing, LTRLoader
 import lib.train.data.transforms as tfm
-from lib.utils.misc import is_main_process
 
 
 def update_settings(settings, cfg):
@@ -28,7 +27,7 @@ def names2datasets(name_list: list, settings, image_loader):
     assert isinstance(name_list, list)
     datasets = []
     for name in name_list:
-        assert name in ["LASOT", "GOT10K_vottrain", "GOT10K_votval", "GOT10K_train_full", "COCO17", "VID", "TRACKINGNET"]
+        assert name in ["LASOT", "GOT10K_vottrain", "GOT10K_votval", "GOT10K_train_full", "COCO17", "VID", "TRACKINGNET", "GOT10K_frisbee_train", "GOT10K_frisbee_val"]
         if name == "LASOT":
             if settings.use_lmdb:
                 print("Building lasot dataset from lmdb")
@@ -41,6 +40,18 @@ def names2datasets(name_list: list, settings, image_loader):
                 datasets.append(Got10k_lmdb(settings.env.got10k_lmdb_dir, split='vottrain', image_loader=image_loader))
             else:
                 datasets.append(Got10k(settings.env.got10k_dir, split='vottrain', image_loader=image_loader))
+        if name == "GOT10K_frisbee_train":
+            if settings.use_lmdb:
+                print("Building got10k from lmdb")
+                datasets.append(Got10k_lmdb(settings.env.got10k_lmdb_dir, split='fr_train', image_loader=image_loader))
+            else:
+                datasets.append(Got10k(settings.env.got10k_dir, split='fr_train', image_loader=image_loader))
+        if name == "GOT10K_frisbee_val":
+            if settings.use_lmdb:
+                print("Building got10k from lmdb")
+                datasets.append(Got10k_lmdb(settings.env.got10k_lmdb_dir, split='fr_val', image_loader=image_loader))
+            else:
+                datasets.append(Got10k(settings.env.got10k_dir, split='fr_val', image_loader=image_loader))
         if name == "GOT10K_train_full":
             if settings.use_lmdb:
                 print("Building got10k_train_full from lmdb")
@@ -115,6 +126,7 @@ def build_dataloaders(cfg, settings):
     sampler_mode = getattr(cfg.DATA, "SAMPLER_MODE", "causal")
     train_cls = getattr(cfg.TRAIN, "TRAIN_CLS", False)
     print("sampler_mode", sampler_mode)
+    print(cfg.DATA.TRAIN.DATASETS_NAME)
     dataset_train = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.TRAIN.DATASETS_NAME, settings, opencv_loader),
                                             p_datasets=cfg.DATA.TRAIN.DATASETS_RATIO,
                                             samples_per_epoch=cfg.DATA.TRAIN.SAMPLE_PER_EPOCH,
@@ -122,6 +134,7 @@ def build_dataloaders(cfg, settings):
                                             num_template_frames=settings.num_template, processing=data_processing_train,
                                             frame_sample_mode=sampler_mode, train_cls=train_cls)
 
+    #dataset_train.getitem()
     train_sampler = DistributedSampler(dataset_train) if settings.local_rank != -1 else None
     shuffle = False if settings.local_rank != -1 else True
 
@@ -148,11 +161,11 @@ def get_optimizer_scheduler(net, cfg):
     if train_cls:
         print("Only training classification head. Learnable parameters are shown below.")
         param_dicts = [
-            {"params": [p for n, p in net.named_parameters() if "cls" in n and p.requires_grad]}
+            {"params": [p for n, p in net.named_parameters() if "cls_head" in n and p.requires_grad]}
         ]
 
         for n, p in net.named_parameters():
-            if "cls" not in n:
+            if "cls_head" not in n:
                 p.requires_grad = False
             else:
                 print(n)
@@ -164,11 +177,6 @@ def get_optimizer_scheduler(net, cfg):
                 "lr": cfg.TRAIN.LR * cfg.TRAIN.BACKBONE_MULTIPLIER,
             },
         ]
-        if is_main_process():
-            print("Learnable parameters are shown below.")
-            for n, p in net.named_parameters():
-                if p.requires_grad:
-                    print(n)
 
     if cfg.TRAIN.OPTIMIZER == "ADAMW":
         optimizer = torch.optim.AdamW(param_dicts, lr=cfg.TRAIN.LR,

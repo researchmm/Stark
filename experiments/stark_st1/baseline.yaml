@@ -24,19 +24,21 @@ DATA:
     NUMBER: 2
   TRAIN:
     DATASETS_NAME:
-    - LASOT
-    - GOT10K_vottrain
-    - COCO17
-    - TRACKINGNET
+    #- LASOT
+    #- GOT10K_vottrain
+    #- COCO17
+    #- TRACKINGNET
+    - GOT10K_frisbee_train
     DATASETS_RATIO:
-    - 1
-    - 1
-    - 1
+    #- 1
+    #- 1
+    #- 1
     - 1
     SAMPLE_PER_EPOCH: 60000
   VAL:
     DATASETS_NAME:
-    - GOT10K_votval
+    #- GOT10K_votval
+    - GOT10K_frisbee_val
     DATASETS_RATIO:
     - 1
     SAMPLE_PER_EPOCH: 10000
@@ -62,9 +64,9 @@ MODEL:
     PRE_NORM: false
 TRAIN:
   BACKBONE_MULTIPLIER: 0.1
-  BATCH_SIZE: 16
+  BATCH_SIZE: 4
   DEEP_SUPERVISION: false
-  EPOCH: 500
+  EPOCH: 20
   FREEZE_BACKBONE_BN: true
   FREEZE_LAYERS:
   - conv1
@@ -77,5 +79,5 @@ TRAIN:
   NUM_WORKER: 8
   OPTIMIZER: ADAMW
   PRINT_INTERVAL: 50
-  VAL_EPOCH_INTERVAL: 20
+  VAL_EPOCH_INTERVAL: 1
   WEIGHT_DECAY: 0.0001
