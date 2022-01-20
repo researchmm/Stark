@@ -34,14 +34,14 @@ DATA:
     #- 1
     #- 1
     - 1
-    SAMPLE_PER_EPOCH: 60000
+    SAMPLE_PER_EPOCH: 32300
   VAL:
     DATASETS_NAME:
     #- GOT10K_votval
     - GOT10K_frisbee_val
     DATASETS_RATIO:
     - 1
-    SAMPLE_PER_EPOCH: 10000
+    SAMPLE_PER_EPOCH: 8200
 MODEL:
   HEAD_TYPE: CORNER
   BACKBONE:
