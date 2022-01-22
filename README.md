@@ -1,4 +1,5 @@
 # STARK
+This is an application of the original implementation STARK network for the tracking of frisbee disc.
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-lasot)](https://paperswithcode.com/sota/visual-object-tracking-on-lasot?p=learning-spatio-temporal-transformer-for)  
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-got-10k)](https://paperswithcode.com/sota/visual-object-tracking-on-got-10k?p=learning-spatio-temporal-transformer-for)  
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/learning-spatio-temporal-transformer-for/visual-object-tracking-on-trackingnet)](https://paperswithcode.com/sota/visual-object-tracking-on-trackingnet?p=learning-spatio-temporal-transformer-for)
@@ -13,7 +14,7 @@ Hiring research interns for visual transformer projects: houwen.peng@microsoft.c
   Besides, its performance can beat DiMP50, while the model size is even less than that of SiamFC! 
   More details can be found at [STARK_Lightning_En.md](lib/tutorials/STARK_Lightning_En.md)/[中文教程](lib/tutorials/STARK_Lightning_Ch.md)
 - The raw results of STARK and other trackers on NOTU (NFS, OTB100, TC128, UAV123) have been uploaded to [here](https://drive.google.com/file/d/1KbtTdxxvvtC6_rlBM3Gi_H7HzpCdrX1F/view?usp=sharing)
-![STARK_Framework](tracking/Framework.png)
+![STARK_Framework](tracking/0008.jpg)
 ## Highlights
 ### End-to-End, Post-processing Free
 
