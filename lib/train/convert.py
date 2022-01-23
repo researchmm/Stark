@@ -14,6 +14,7 @@ import _init_paths
 import lib.train.admin.settings as ws_settings
 from lib.train.base_functions import *
 from lib.models.stark import build_starks, build_starkst
+from lib.test.parameter.stark_st import parameters
 
 
 def init_seeds(seed):
@@ -104,6 +105,8 @@ def convert(settings, out_dir):
     else:
         raise ValueError("illegal script name")
 
+    params = parameters("yaml_file")
+    net.load_state_dict(torch.load(params.checkpoint, map_location='cpu')['net'], strict=True)
     # wrap networks to distributed one
     net.cuda()
     if settings.local_rank != -1:
