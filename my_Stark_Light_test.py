@@ -26,7 +26,7 @@ def process(img_arr: np.ndarray, amask_arr: np.ndarray):
     amask_arr_3d = amask_arr[np.newaxis, :, :]  # (1,H,W)
     return img_arr_4d.astype(np.float32), amask_arr_3d.astype(np.bool)
 
-def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
+def sample_target(im, target_bb, search_area_factor, output_sz=None):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
 
     args:
@@ -63,8 +63,6 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
 
     # Crop target
     im_crop = im[y1 + y1_pad:y2 - y2_pad, x1 + x1_pad:x2 - x2_pad, :]
-    if mask is not None:
-        mask_crop = mask[y1 + y1_pad:y2 - y2_pad, x1 + x1_pad:x2 - x2_pad]
 
     # Pad
     im_crop_padded = cv2.copyMakeBorder(im_crop, y1_pad, y2_pad, x1_pad, x2_pad, cv2.BORDER_CONSTANT)
@@ -77,23 +75,15 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
     if x2_pad == 0:
         end_x = None
     att_mask[y1_pad:end_y, x1_pad:end_x] = 0
-    if mask is not None:
-        mask_crop_padded = F.pad(mask_crop, pad=(x1_pad, x2_pad, y1_pad, y2_pad), mode='constant', value=0)
 
     if output_sz is not None:
         resize_factor = output_sz / crop_sz
         im_crop_padded = cv2.resize(im_crop_padded, (output_sz, output_sz))
         att_mask = cv2.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
-        if mask is None:
-            return im_crop_padded, resize_factor, att_mask
-        mask_crop_padded = \
-        F.interpolate(mask_crop_padded[None, None], (output_sz, output_sz), mode='bilinear', align_corners=False)[0, 0]
-        return im_crop_padded, resize_factor, att_mask, mask_crop_padded
+        return im_crop_padded, resize_factor, att_mask
 
     else:
-        if mask is None:
-            return im_crop_padded, att_mask.astype(np.bool_), 1.0
-        return im_crop_padded, 1.0, att_mask.astype(np.bool_), mask_crop_padded  
+        return im_crop_padded, att_mask.astype(np.bool_), 1.0
 
 def clip_box(box: list, H, W, margin=0):
     x1, y1, w, h = box
@@ -157,149 +147,13 @@ class TrackerParams:
         return hasattr(self, name)
 
 def my_tracker(get_new_frame, get_init_box, seq_num):
-    def _edict2dict(dest_dict, src_edict):
-            if isinstance(dest_dict, dict) and isinstance(src_edict, dict):
-                for k, v in src_edict.items():
-                    if not isinstance(v, edict):
-                        dest_dict[k] = v
-                    else:
-                        dest_dict[k] = {}
-                        _edict2dict(dest_dict[k], v)
-            else:
-                return
-
-    def gen_config(config_file):
-        cfg_dict = {}
-        _edict2dict(cfg_dict, cfg)
-        with open(config_file, 'w') as f:
-            yaml.dump(cfg_dict, f, default_flow_style=False)
-
-
-    def _update_config(base_cfg, exp_cfg):
-        if isinstance(base_cfg, dict) and isinstance(exp_cfg, edict):
-            for k, v in exp_cfg.items():
-                if k in base_cfg:
-                    if not isinstance(v, dict):
-                        base_cfg[k] = v
-                    else:
-                        _update_config(base_cfg[k], v)
-                else:
-                    raise ValueError("{} not exist in config.py".format(k))
-        else:
-            return
-
-    def update_config_from_file(filename):
-        exp_config = None
-        with open(filename) as f:
-            exp_config = edict(yaml.safe_load(f))
-            _update_config(cfg, exp_config)
-
-    """Get parameters."""
-    params = TrackerParams()
-    cfg = edict()
-
-    # MODEL
-    cfg.MODEL = edict()
-    cfg.MODEL.HEAD_TYPE = "CORNER_LITE"
-    cfg.MODEL.HIDDEN_DIM = 256
-    cfg.MODEL.HEAD_DIM = 256  # channel in the corner head
-    # MODEL.BACKBONE
-    cfg.MODEL.BACKBONE = edict()
-    cfg.MODEL.BACKBONE.TYPE = "RepVGG-A0"  # resnet50, resnext101_32x8d
-    cfg.MODEL.BACKBONE.OUTPUT_LAYERS = ["stage3"]
-    cfg.MODEL.BACKBONE.DILATION = False
-    cfg.MODEL.BACKBONE.LAST_STAGE_BLOCK = 14
-    # MODEL.TRANSFORMER
-    cfg.MODEL.TRANSFORMER = edict()
-    cfg.MODEL.TRANSFORMER.NHEADS = 8
-    cfg.MODEL.TRANSFORMER.DROPOUT = 0.1
-    cfg.MODEL.TRANSFORMER.DIM_FEEDFORWARD = 2048
-
-    # TRAIN
-    cfg.TRAIN = edict()
-    cfg.TRAIN.DISTILL = False
-    cfg.TRAIN.DISTILL_LOSS_TYPE = "KL"
-    cfg.TRAIN.AMP = False
-    cfg.TRAIN.LR = 0.0001
-    cfg.TRAIN.WEIGHT_DECAY = 0.0001
-    cfg.TRAIN.EPOCH = 500
-    cfg.TRAIN.LR_DROP_EPOCH = 400
-    cfg.TRAIN.BATCH_SIZE = 16
-    cfg.TRAIN.NUM_WORKER = 8
-    cfg.TRAIN.OPTIMIZER = "ADAMW"
-    cfg.TRAIN.BACKBONE_MULTIPLIER = 0.1
-    cfg.TRAIN.GIOU_WEIGHT = 2.0
-    cfg.TRAIN.L1_WEIGHT = 5.0
-    cfg.TRAIN.DEEP_SUPERVISION = False
-    cfg.TRAIN.FREEZE_BACKBONE_BN = True
-    cfg.TRAIN.BACKBONE_TRAINED_LAYERS = ['stage2', 'stage3']
-    cfg.TRAIN.PRINT_INTERVAL = 50
-    cfg.TRAIN.VAL_EPOCH_INTERVAL = 20
-    cfg.TRAIN.GRAD_CLIP_NORM = 0.1
-    # TRAIN.SCHEDULER
-    cfg.TRAIN.SCHEDULER = edict()
-    cfg.TRAIN.SCHEDULER.TYPE = "step"
-    cfg.TRAIN.SCHEDULER.DECAY_RATE = 0.1
-
-    # DATA
-    cfg.DATA = edict()
-    cfg.DATA.MEAN = [0.485, 0.456, 0.406]
-    cfg.DATA.STD = [0.229, 0.224, 0.225]
-    cfg.DATA.MAX_SAMPLE_INTERVAL = 200
-    # DATA.TRAIN
-    cfg.DATA.TRAIN = edict()
-    cfg.DATA.TRAIN.DATASETS_NAME = ["LASOT", "GOT10K_vottrain"]
-    cfg.DATA.TRAIN.DATASETS_RATIO = [1, 1]
-    cfg.DATA.TRAIN.SAMPLE_PER_EPOCH = 60000
-    # DATA.VAL
-    cfg.DATA.VAL = edict()
-    cfg.DATA.VAL.DATASETS_NAME = ["GOT10K_votval"]
-    cfg.DATA.VAL.DATASETS_RATIO = [1]
-    cfg.DATA.VAL.SAMPLE_PER_EPOCH = 10000
-    # DATA.SEARCH
-    cfg.DATA.SEARCH = edict()
-    cfg.DATA.SEARCH.SIZE = 320
-    cfg.DATA.SEARCH.FEAT_SIZE = 20
-    cfg.DATA.SEARCH.FACTOR = 5.0
-    cfg.DATA.SEARCH.CENTER_JITTER = 4.5
-    cfg.DATA.SEARCH.SCALE_JITTER = 0.5
-    # DATA.TEMPLATE
-    cfg.DATA.TEMPLATE = edict()
-    cfg.DATA.TEMPLATE.SIZE = 128
-    cfg.DATA.TEMPLATE.FEAT_SIZE = 8
-    cfg.DATA.TEMPLATE.FACTOR = 2.0
-    cfg.DATA.TEMPLATE.CENTER_JITTER = 0
-    cfg.DATA.TEMPLATE.SCALE_JITTER = 0
-
-    # TEST
-    cfg.TEST = edict()
-    cfg.TEST.TEMPLATE_FACTOR = 2.0
-    cfg.TEST.TEMPLATE_SIZE = 128
-    cfg.TEST.SEARCH_FACTOR = 5.0
-    cfg.TEST.SEARCH_SIZE = 320
-    cfg.TEST.EPOCH = 500
-    yaml_name = "baseline_rephead_4_lite_search5"
-    
-    # update default config from yaml file
-    yaml_file = os.path.join(prj_dir, 'experiments/stark_lightning_X_trt/%s.yaml' % yaml_name)
-
-    update_config_from_file(yaml_file)
-    params.cfg = cfg
-    print("test config: ", cfg)
-
+    params = edict()
     # template and search region
-    params.template_factor = cfg.TEST.TEMPLATE_FACTOR
-    params.template_size = cfg.TEST.TEMPLATE_SIZE
-    params.search_factor = cfg.TEST.SEARCH_FACTOR
-    params.search_size = cfg.TEST.SEARCH_SIZE
+    params.template_factor = 2.0
+    params.template_size = 128
+    params.search_factor = 5.0
+    params.search_size = 320
 
-    # Network checkpoint path
-    params.checkpoint = os.path.join(save_dir,
-                                     "checkpoints/train/stark_lightning_X_trt/%s/STARKLightningXtrt_ep%04d.pth.tar" %
-                                     (yaml_name, cfg.TEST.EPOCH))
-    # whether to save boxes from all queries
-    params.save_all_boxes = False
-    
     gpu_id = 0
     providers = ["CUDAExecutionProvider"]
     provider_options = [{"device_id": str(gpu_id)}]
@@ -335,10 +189,7 @@ def my_tracker(get_new_frame, get_init_box, seq_num):
                       'mask_vec_z': ort_outs_z[1],
                       'pos_vec_z': ort_outs_z[2],
                       }
-
         ort_outs = ort_sess_x.run(None, ort_inputs)
-        if frame_id == 1:
-            print(ort_outs[0].reshape(4))
         pred_box = (ort_outs[0].reshape(4) * params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
         # get the final box result
         state = clip_box(map_box_back(state, pred_box, params.search_size, resize_factor), H, W, margin=10)
