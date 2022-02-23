@@ -10,9 +10,13 @@ from collections import OrderedDict
 import onnxruntime
 import time
 import math
+import tensorflow as tf
+from onnx2keras import onnx_to_keras
+from onnx_tf.backend import prepare
+import onnx
 
 prj_dir = r'C:\Users\zadorozhnyy.v\Downloads\mystark'
-save_dir = r'C:\Users\zadorozhnyy.v\Downloads\mystark'    
+save_dir = r'C:\Users\zadorozhnyy.v\Downloads\mystark\SL_model'    
 data_dir = r'C:\Users\zadorozhnyy.v\Downloads\Stark-main\data\got10k\test'
 
 def process(img_arr: np.ndarray, amask_arr: np.ndarray):
@@ -146,21 +150,27 @@ class TrackerParams:
         """Check if there exist a parameter with the given name."""
         return hasattr(self, name)
 
-def my_tracker(get_new_frame, get_init_box, seq_num):
+def my_tracker(get_new_frame, get_init_box, seq_num, backend):
     params = edict()
     # template and search region
     params.template_factor = 2.0
     params.template_size = 128
     params.search_factor = 5.0
     params.search_size = 320
+    if backend == 'onnx':
+        gpu_id = 0
+        providers = ["CUDAExecutionProvider"]
+        provider_options = [{"device_id": str(gpu_id)}]
+        ort_sess_z = onnxruntime.InferenceSession(os.path.join(save_dir, "backbone_bottleneck_pe.onnx"), providers=providers,
+                                                       provider_options=provider_options)
+        ort_sess_x = onnxruntime.InferenceSession(os.path.join(save_dir, "complete.onnx"), providers=providers,
+                                                       provider_options=provider_options)
+    else:
 
-    gpu_id = 0
-    providers = ["CUDAExecutionProvider"]
-    provider_options = [{"device_id": str(gpu_id)}]
-    ort_sess_z = onnxruntime.InferenceSession("backbone_bottleneck_pe.onnx", providers=providers,
-                                                   provider_options=provider_options)
-    ort_sess_x = onnxruntime.InferenceSession("complete.onnx", providers=providers,
-                                                   provider_options=provider_options)
+        ort_sess_z = tf.saved_model.load(os.path.join(save_dir, "tf_backbone"))
+        #onnx_model = onnx.load(os.path.join(save_dir, "backbone_bottleneck_pe.onnx"))
+        ort_sess_x = tf.saved_model.load(os.path.join(save_dir, "tf_complete"))
+        
     frame_id = 0
     ort_outs_z = []
 
@@ -171,7 +181,11 @@ def my_tracker(get_new_frame, get_init_box, seq_num):
     template, template_mask = process(z_patch_arr, z_amask_arr)
     # forward the template once
     ort_inputs = {'img_z': template, 'mask_z': template_mask}
-    ort_outs_z = ort_sess_z.run(None, ort_inputs)
+    if backend == 'onnx':
+        ort_outs_z = ort_sess_z.run(None, ort_inputs)
+    else:
+        #ort_outs_z = ort_sess_z(template, template_mask)
+        ort_outs_z = ort_sess_z(img_z = template, mask_z = template_mask)
     outputs = []
     outputs.append(state)
     frame_id = 1
@@ -182,15 +196,22 @@ def my_tracker(get_new_frame, get_init_box, seq_num):
         x_patch_arr, resize_factor, x_amask_arr = sample_target(image, state, params.search_factor,
                                                                 output_sz=params.search_size)  # (x1, y1, w, h)
         search, search_mask = process(x_patch_arr, x_amask_arr)
-
-        ort_inputs = {'img_x': search,
+        
+        if backend == 'onnx':
+            ort_inputs = {'img_x': search,
                       'mask_x': search_mask,
                       'feat_vec_z': ort_outs_z[0],
                       'mask_vec_z': ort_outs_z[1],
                       'pos_vec_z': ort_outs_z[2],
                       }
-        ort_outs = ort_sess_x.run(None, ort_inputs)
-        pred_box = (ort_outs[0].reshape(4) * params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
+        
+            ort_outs = ort_sess_x.run(None, ort_inputs)
+            pred_box = (ort_outs[0].reshape(4) * params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
+        else:
+
+            ort_outs = ort_sess_x(img_x = search, mask_x = search_mask, feat_vec_z = ort_outs_z['feat'], mask_vec_z = ort_outs_z['mask'], pos_vec_z =  ort_outs_z['pos'] )
+            coords = ort_outs['outputs_coord'].numpy()[0]
+            pred_box = (coords * params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
         # get the final box result
         state = clip_box(map_box_back(state, pred_box, params.search_size, resize_factor), H, W, margin=10)
 
@@ -202,9 +223,10 @@ def my_tracker(get_new_frame, get_init_box, seq_num):
 def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
     parser.add_argument('--sequence', type=str, default=None, help='Sequence number')
+    parser.add_argument('--backend', type=str, default = 'onnx')
     args = parser.parse_args()
     seq_num = int(args.sequence)
-    outputs = my_tracker(get_new_frame, get_init_box, seq_num)
+    outputs = my_tracker(get_new_frame, get_init_box, seq_num, args.backend)
     save_res(seq_num, outputs)
 if __name__ == '__main__':
     main()
