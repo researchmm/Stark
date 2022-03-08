@@ -175,7 +175,7 @@ def my_tracker(get_new_frame, get_init_box, seq_num, backend):
     ort_outs_z = []
 
     state = get_init_box(seq_num)
-    image = get_new_frame(frame_id, seq_num) 
+    image = get_new_frame(frame_id, seq_num)
     z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor, output_sz=params.template_size)
     #print(z_patch_arr)
     template, template_mask = process(z_patch_arr, z_amask_arr)
@@ -217,8 +217,7 @@ def my_tracker(get_new_frame, get_init_box, seq_num, backend):
 
         outputs.append(state)
         frame_id += 1
-        image = get_new_frame(frame_id, seq_num) 
-
+        image = get_new_frame(frame_id, seq_num)
     return outputs
 def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
