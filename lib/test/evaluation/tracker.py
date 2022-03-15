@@ -72,7 +72,8 @@ class Tracker:
             multiobj_mode: Which mode to use for multiple objects.
         """
         params = self.get_parameters()
-
+        print("parameters = ")
+        print(params)
         debug_ = debug
         if debug is None:
             debug_ = getattr(params, 'debug', 0)
@@ -81,9 +82,10 @@ class Tracker:
 
         # Get init information
         init_info = seq.init_info()
-
+        print("tracker.run_sequence: init_info")
+        print(init_info)
         tracker = self.create_tracker(params)
-
+        print("after params")
         output = self._track_sequence(tracker, seq, init_info)
         return output
 

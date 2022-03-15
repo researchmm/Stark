@@ -15,6 +15,7 @@ class STARK_ST(BaseTracker):
     def __init__(self, params, dataset_name):
         super(STARK_ST, self).__init__(params)
         network = build_starkst(params.cfg)
+        print("stark_st: self.params.checkpoint = " + str(self.params.checkpoint))
         network.load_state_dict(torch.load(self.params.checkpoint, map_location='cpu')['net'], strict=True)
         self.cfg = params.cfg
         self.network = network.cuda()

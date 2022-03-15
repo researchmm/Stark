@@ -5,8 +5,20 @@ import sys
 from itertools import product
 from collections import OrderedDict
 from lib.test.evaluation import Sequence, Tracker
-import torch
+import cv2 as cv
 
+def visualize_results(seq, dir_name, output):
+    out_dir = os.path.join(dir_name, seq.name)
+    os.mkdir(out_dir)
+    for i in range(0, len(output)):
+        #img = cv.cvtColor(cv.imread(seq.frames[i]), cv.COLOR_BGR2RGB)
+        img = cv.imread(seq.frames[i])
+        s_x = int(output[i][0])
+        s_y = int(output[i][1])
+        e_x = s_x + int(output[i][2])
+        e_y = s_y + int(output[i][3])
+        cv.rectangle(img, (s_x, s_y), (e_x, e_y), (0, 0, 255), 2)
+        cv.imwrite(os.path.join(out_dir, (seq.frames[i].split('\\')[-1]).split('/')[-1]), img)
 
 def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
     """Saves the output of the tracker."""
@@ -99,7 +111,7 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
                 save_time(timings_file, data)
 
 
-def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
+def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visualize=False, dir_name=''):
     """Runs a tracker on a sequence."""
     '''2021.1.2 Add multiple gpu support'''
     try:
@@ -123,7 +135,7 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
             missing = [not os.path.isfile(f) for f in bbox_files]
             return sum(missing) == 0
 
-    if _results_exist() and not debug:
+    if _results_exist() and not debug and not visualize:
         print('FPS: {}'.format(-1))
         return
 
@@ -151,9 +163,11 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
 
     if not debug:
         _save_tracker_output(seq, tracker, output)
+    if visualize:
+        visualize_results(seq, dir_name, output['target_bbox'])
 
 
-def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8):
+def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8, visualize=False, dir_name=''):
     """Runs a list of trackers on a dataset.
     args:
         dataset: List of Sequence instances, forming a dataset.
@@ -175,7 +189,7 @@ def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8):
     if mode == 'sequential':
         for seq in dataset:
             for tracker_info in trackers:
-                run_sequence(seq, tracker_info, debug=debug)
+                run_sequence(seq, tracker_info, debug=debug, visualize=visualize, dir_name=dir_name)
     elif mode == 'parallel':
         param_list = [(seq, tracker_info, debug, num_gpus) for seq, tracker_info in product(dataset, trackers)]
         with multiprocessing.Pool(processes=threads) as pool:
