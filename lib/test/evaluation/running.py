@@ -7,6 +7,22 @@ from collections import OrderedDict
 from lib.test.evaluation import Sequence, Tracker
 import cv2 as cv
 
+def get_iou(seq, output):
+    tr = np.array(seq.ground_truth_rect)
+    n = min(tr.shape[0], output.shape[0])
+    iou = []
+    for i in range(1, n):
+        x_l = max(tr[i][0], output[i][0])
+        y_top = max(tr[i][1], output[i][1])
+        x_r = min(tr[i][0] + tr[i][2], output[i][0] + output[i][2])
+        y_bot = min(tr[i][1] + tr[i][3], output[i][1] + output[i][3])
+        if x_r < x_l or y_bot < y_top:
+            iou.append(0.0)
+        else:
+            inter = (x_r - x_l) * (y_bot - y_top)
+            iou.append(inter / (tr[i][2]*tr[i][3] + output[i][2] * output[i][3] - inter))
+    #print(iou)
+    return np.mean(iou)
 def visualize_results(seq, dir_name, output):
     out_dir = os.path.join(dir_name, seq.name)
     os.mkdir(out_dir)
@@ -111,16 +127,9 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
                 save_time(timings_file, data)
 
 
-def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visualize=False, dir_name=''):
+def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visualize=False, dir_name='', test_iou=False):
     """Runs a tracker on a sequence."""
     '''2021.1.2 Add multiple gpu support'''
-    try:
-        worker_name = multiprocessing.current_process().name
-        worker_id = int(worker_name[worker_name.find('-') + 1:]) - 1
-        gpu_id = worker_id % num_gpu
-        torch.cuda.set_device(gpu_id)
-    except:
-        pass
 
     def _results_exist():
         if seq.object_ids is None:
@@ -135,7 +144,7 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visual
             missing = [not os.path.isfile(f) for f in bbox_files]
             return sum(missing) == 0
 
-    if _results_exist() and not debug and not visualize:
+    if _results_exist() and not debug and not visualize and not test_iou:
         print('FPS: {}'.format(-1))
         return
 
@@ -161,13 +170,13 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visual
 
     print('FPS: {}'.format(num_frames / exec_time))
 
-    if not debug:
+    if not debug and not visualize and not test_iou:
         _save_tracker_output(seq, tracker, output)
     if visualize:
         visualize_results(seq, dir_name, output['target_bbox'])
+    return 0 if not test_iou else get_iou(seq, np.array(output['target_bbox']))
 
-
-def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8, visualize=False, dir_name=''):
+def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8, visualize=False, dir_name='', test_iou=False):
     """Runs a list of trackers on a dataset.
     args:
         dataset: List of Sequence instances, forming a dataset.
@@ -187,11 +196,18 @@ def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8, visualize
         mode = 'parallel'
 
     if mode == 'sequential':
+        n = len(dataset)
+        print(n)
+        iou = 0.0
         for seq in dataset:
             for tracker_info in trackers:
-                run_sequence(seq, tracker_info, debug=debug, visualize=visualize, dir_name=dir_name)
+                iou += run_sequence(seq, tracker_info, debug=debug, visualize=visualize, dir_name=dir_name, test_iou=test_iou)
+                print(iou)
+
     elif mode == 'parallel':
         param_list = [(seq, tracker_info, debug, num_gpus) for seq, tracker_info in product(dataset, trackers)]
         with multiprocessing.Pool(processes=threads) as pool:
             pool.starmap(run_sequence, param_list)
     print('Done')
+    if test_iou:
+        print(iou / n)
