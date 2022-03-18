@@ -108,49 +108,24 @@ def map_box_back(state, pred_box: list, search_size, resize_factor: float):
     cy_real = cy + (cy_prev - half_side)
     return [cx_real - 0.5 * w, cy_real - 0.5 * h, w, h]
 
-def save_res(seq_num, data):
-    seq_name = open(os.path.join(data_dir, "list.txt"), "r").readlines()[seq_num]
-    file = os.path.join(prj_dir,"lib\\test\\tracking_results\\stark_lightning_X_trt\\baseline_rephead_4_lite_search5\\got10k", seq_name.split('\n')[0] + ".txt")
+def save_res(im_dir, data):
+    file = os.path.join(prj_dir,"lib\\test\\tracking_results\\stark_lightning_X_trt\\baseline_rephead_4_lite_search5\\got10k", os.path.split(im_dir)[1] + ".txt")
     tracked_bb = np.array(data).astype(int)
     np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')    
 
-def get_new_frame(frame_id, seq_num):
-    seq_name = open(os.path.join(data_dir, "list.txt"), "r").readlines()[seq_num]
-    imgs = [img for img in os.listdir(os.path.join(data_dir, seq_name.split('\n')[0])) if img.endswith(".jpg")]
+def get_new_frame(frame_id, im_dir):
+    imgs = [img for img in os.listdir(im_dir) if img.endswith(".jpg")]
     if len(imgs) <= frame_id:
         return None
-    im = cv2.imread(os.path.join(data_dir, seq_name.split('\n')[0], imgs[frame_id]))
+    im = cv2.imread(os.path.join(im_dir, imgs[frame_id]))
     return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
-def get_init_box(seq_num):
-    seq_name = open(os.path.join(data_dir, "list.txt"), "r").readlines()[seq_num]
-    path = os.path.join(data_dir, seq_name.split('\n')[0], "groundtruth.txt")
+def get_init_box(im_dir):
+    path = os.path.join(im_dir, "groundtruth.txt")
     ground_truth_rect = np.loadtxt(path, delimiter=',', dtype=np.float64)
     return ground_truth_rect
 
-class TrackerParams:
-    """Class for tracker parameters."""
-    def set_default_values(self, default_vals: dict):
-        for name, val in default_vals.items():
-            if not hasattr(self, name):
-                setattr(self, name, val)
-
-    def get(self, name: str, *default):
-        """Get a parameter value with the given name. If it does not exists, it return the default value given as a
-        second argument or returns an error if no default value is given."""
-        if len(default) > 1:
-            raise ValueError('Can only give one default value.')
-
-        if not default:
-            return getattr(self, name)
-
-        return getattr(self, name, default[0])
-
-    def has(self, name: str):
-        """Check if there exist a parameter with the given name."""
-        return hasattr(self, name)
-
-def my_tracker(get_new_frame, get_init_box, seq_num, backend):
+def my_tracker(get_new_frame, get_init_box, im_dir, backend):
     params = edict()
     # template and search region
     params.template_factor = 2.0
@@ -174,8 +149,8 @@ def my_tracker(get_new_frame, get_init_box, seq_num, backend):
     frame_id = 0
     ort_outs_z = []
 
-    state = get_init_box(seq_num)
-    image = get_new_frame(frame_id, seq_num) 
+    state = get_init_box(im_dir)
+    image = get_new_frame(frame_id, im_dir)
     z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor, output_sz=params.template_size)
     #print(z_patch_arr)
     template, template_mask = process(z_patch_arr, z_amask_arr)
@@ -189,7 +164,7 @@ def my_tracker(get_new_frame, get_init_box, seq_num, backend):
     outputs = []
     outputs.append(state)
     frame_id = 1
-    image = get_new_frame(frame_id, seq_num) 
+    image = get_new_frame(frame_id, im_dir)
     while image is not None:
         H, W, _ = image.shape
         
@@ -217,16 +192,20 @@ def my_tracker(get_new_frame, get_init_box, seq_num, backend):
 
         outputs.append(state)
         frame_id += 1
-        image = get_new_frame(frame_id, seq_num) 
-
+        image = get_new_frame(frame_id, im_dir)
     return outputs
+'''
+Script arguments: 
+1) Path to the folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
+Directory should also contain the file groundtruth.txt with the position of the object at the initial 1st frame.
+2) backend: onnx or tensorflow
+'''
 def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
-    parser.add_argument('--sequence', type=str, default=None, help='Sequence number')
-    parser.add_argument('--backend', type=str, default = 'onnx')
+    parser.add_argument('--folder_path', type=str, default=None, help='Path to the folder')
+    parser.add_argument('--backend', type=str, default='tf')
     args = parser.parse_args()
-    seq_num = int(args.sequence)
-    outputs = my_tracker(get_new_frame, get_init_box, seq_num, args.backend)
-    save_res(seq_num, outputs)
+    outputs = my_tracker(get_new_frame, get_init_box, args.folder_path, args.backend)
+    save_res(args.folder_path, outputs)
 if __name__ == '__main__':
     main()
