@@ -109,9 +109,7 @@ def map_box_back(state, pred_box: list, search_size, resize_factor: float):
     return [cx_real - 0.5 * w, cy_real - 0.5 * h, w, h]
 
 def save_res(im_dir, data):
-    print(im_dir.split('\\')[-1])
-    file = os.path.join(prj_dir,"lib\\test\\tracking_results\\stark_lightning_X_trt\\baseline_rephead_4_lite_search5\\got10k", im_dir.split('\\')[-1] + ".txt")
-    print(file)
+    file = os.path.join(prj_dir,"lib\\test\\tracking_results\\stark_lightning_X_trt\\baseline_rephead_4_lite_search5\\got10k", os.path.split(im_dir)[1] + ".txt")
     tracked_bb = np.array(data).astype(int)
     np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')    
 

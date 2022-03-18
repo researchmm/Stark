@@ -34,7 +34,7 @@ def visualize_results(seq, dir_name, output):
         e_x = s_x + int(output[i][2])
         e_y = s_y + int(output[i][3])
         cv.rectangle(img, (s_x, s_y), (e_x, e_y), (0, 0, 255), 2)
-        cv.imwrite(os.path.join(out_dir, (seq.frames[i].split('\\')[-1]).split('/')[-1]), img)
+        cv.imwrite(os.path.join(out_dir, os.path.split(seq.frames[i])[1]), img)
 
 def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
     """Saves the output of the tracker."""

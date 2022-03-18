@@ -43,7 +43,7 @@ class TrackDataset():
         frame_list.sort(key=lambda f: int(f[:-4]))
         frames_list = [os.path.join(frames_path, frame) for frame in frame_list]
 
-        return Sequence(sequence_name if sequence_name != '' else self.base_path.split('\\')[-1], frames_list, 'got10k', ground_truth_rect.reshape(-1, 4))
+        return Sequence(sequence_name if sequence_name != '' else os.path.split(self.base_path)[1], frames_list, 'got10k', ground_truth_rect.reshape(-1, 4))
 
     def __len__(self):
         return len(self.sequence_list)
@@ -62,7 +62,7 @@ def run_tracker(tracker_name, tracker_param, dir_name, run_id=None, debug=0, thr
     """
 
     dataset = TrackDataset(dir_name).get_sequence_list()
-    res_dir = os.path.join(dir_name[:len(dir_name) - len(dir_name.split('\\')[-1])], 'results')
+    res_dir = os.path.join(os.path.split(dir_name)[0], 'results')
 
     if os.path.exists(res_dir):
         shutil.rmtree(res_dir, ignore_errors=True)
@@ -78,7 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
     parser.add_argument('tracker_name', type=str, help='Name of tracking method.')
     parser.add_argument('tracker_param', type=str, help='Name of config file.')
-    parser.add_argument('--dir_name', type=str)
+    parser.add_argument('dir_name', type=str)
     parser.add_argument('--runid', type=int, default=None, help='The run id.')
     parser.add_argument('--debug', type=int, default=0, help='Debug level.')
     parser.add_argument('--threads', type=int, default=0, help='Number of threads.')
@@ -88,7 +88,10 @@ def main():
 
     run_tracker(args.tracker_name, args.tracker_param,  args.dir_name, args.runid, args.debug,
                 args.threads, num_gpus=args.num_gpus)
-
+'''
+tracker_name may be one of the following: stark_s, stark_st, stark_lightning_X_trt
+tracker_param: baseline; other possible options are baseline_R101, baseline_got10k_only - were not trained yet, use baseline
+'''
 
 if __name__ == '__main__':
     main()
