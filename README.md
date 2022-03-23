@@ -9,6 +9,7 @@ The official implementation of the **ICCV2021** paper [**Learning Spatio-Tempora
 
 Hiring research interns for visual transformer projects: houwen.peng@microsoft.com
 ## News
+- STARK has been integrated into the [mmtracking](https://github.com/open-mmlab/mmtracking/tree/master/configs/sot/stark) library!
 - :trophy: **We are the Winner of VOT-21 RGB-D challenge** 
 - :trophy: **We won the Runner-ups in VOT-21 Real-Time and Long-term challenges**
 - We release an extremely fast version of STARK called **STARK-Lightning** :zap: . It can run at **200~300 FPS** on a RTX TITAN GPU. 
