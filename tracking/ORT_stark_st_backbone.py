@@ -13,8 +13,20 @@ import onnxruntime
 import time
 import os
 from lib.test.evaluation.environment import env_settings
-from lib.utils.misc import *
 from torch.utils.mobile_optimizer import optimize_for_mobile
+from lib.utils.misc import NestedTensor
+
+
+def process(img_arr, amask_arr):
+    mean = torch.tensor([0.485, 0.456, 0.406]).view((1, 3, 1, 1))
+    std = torch.tensor([0.229, 0.224, 0.225]).view((1, 3, 1, 1))
+
+    # Deal with the image patch
+    img_tensor = img_arr.float().permute((2, 0, 1)).unsqueeze(dim=0)
+    img_tensor_norm = ((img_tensor / 255.0) - mean) / std  # (1,3,H,W)
+    # Deal with the attention mask
+    amask_tensor = amask_arr.unsqueeze(dim=0)  # (1,H,W)
+    return NestedTensor(img_tensor_norm, amask_tensor)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Parse args for training')
@@ -38,8 +50,8 @@ class Backbone_Bottleneck(nn.Module):
         self.backbone = backbone
         self.bottleneck = bottleneck
 
-    def forward(self, input: NestedTensor):
-        assert isinstance(input, NestedTensor)
+    def forward(self, img_arr:torch.Tensor, amask_arr:torch.Tensor):
+        input = process(img_arr, amask_arr)
         output_back, pos = self.backbone(input)
         src_feat, mask = output_back[-1].decompose()
         assert mask is not None
@@ -57,14 +69,14 @@ def to_numpy(tensor):
 
 
 if __name__ == "__main__":
+
     load_checkpoint = True
-    save_name = "backbone_stark_st.onnx"
     """update cfg"""
     args = parse_args()
     yaml_fname = 'experiments/%s/%s.yaml' % (args.script, args.config)
     print(yaml_fname)
     update_config_from_file(yaml_fname)
-    '''set some values'''
+
     bs = 1
     z_sz = cfg.TEST.TEMPLATE_SIZE
     # build the stark model
@@ -87,21 +99,14 @@ if __name__ == "__main__":
     # get the template
     img_z, mask_z = get_data(bs, z_sz)
     # forward the template
-    torch_outs = torch_model(NestedTensor(img_z, mask_z))
-    '''
-    torch.onnx.export(torch_model,  # model being run
-                      NestedTensor(img_z, mask_z),  # model input (or a tuple for multiple inputs)
-                      save_name,  # where to save the model (can be a file or file-like object)
-                      export_params=True,  # store the trained parameter weights inside the model file
-                      opset_version=11,  # the ONNX version to export the model to
-                      do_constant_folding=True,  # whether to execute constant folding for optimization
-                      input_names=['img_z', 'mask_z'],  # the model's input names
-                      output_names=['feat', 'mask', 'pos'],  # the model's output names
-                      # dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
-                      #               'output': {0: 'batch_size'}}
-                      )
-    '''
+    #torch_outs = torch_model(img_z[0], mask_z[0])
+
 
     torchscript_model = torch.jit.script(torch_model)
     torchscript_model_optimized = optimize_for_mobile(torchscript_model)
     torch.jit.save(torchscript_model_optimized, "stark_st_backbone.pt")
+    '''
+    path = 'stark_st_backbone.pt'
+    model = torch.jit.load(path)
+    model.eval()
+    '''
