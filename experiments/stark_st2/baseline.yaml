@@ -25,17 +25,19 @@ DATA:
   TRAIN:
     DATASETS_NAME:
     #- LASOT
-    - GOT10K_frisbee_train
+    #- GOT10K_vottrain
     #- COCO17
     #- TRACKINGNET
+    - GOT10K_frisbee_train
     DATASETS_RATIO:
-    - 1
-    - 1
-    - 1
+    #- 1
+    #- 1
+    #- 1
     - 1
     SAMPLE_PER_EPOCH: 60000
   VAL:
     DATASETS_NAME:
+    #- GOT10K_votval
     - GOT10K_frisbee_val
     DATASETS_RATIO:
     - 1
@@ -65,7 +67,7 @@ TRAIN:
   BACKBONE_MULTIPLIER: 0.1
   BATCH_SIZE: 16
   DEEP_SUPERVISION: false
-  EPOCH: 50
+  EPOCH: 15
   FREEZE_BACKBONE_BN: true
   FREEZE_LAYERS:
   - conv1
@@ -79,14 +81,14 @@ TRAIN:
   VAL_EPOCH_INTERVAL: 1
   WEIGHT_DECAY: 0.0001
 TEST:
-  EPOCH: 50
+  EPOCH: 4
   SEARCH_FACTOR: 5.0
   SEARCH_SIZE: 320
   TEMPLATE_FACTOR: 2.0
   TEMPLATE_SIZE: 128
   UPDATE_INTERVALS:
     LASOT: [200]
-    GOT10K_TEST: [200]
+    GOT10K_TEST: [1, 15]
     TRACKINGNET: [25]
     VOT20: [10]
     VOT20LT: [200]

@@ -5,7 +5,6 @@ from lib.models.stark.backbone import FrozenBatchNorm2d
 from lib.models.stark.repvgg import RepVGGBlock
 # import time
 
-
 def conv(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1,
          freeze_bn=False):
     if freeze_bn:
@@ -53,7 +52,7 @@ class Corner_Predictor(nn.Module):
             self.coord_y = self.indice.repeat((1, self.feat_sz)) \
                 .view((self.feat_sz * self.feat_sz,)).float().cuda()
 
-    def forward(self, x, return_dist=False, softmax=True):
+    def forward(self, x, return_dist: bool = False, softmax: bool = True):
         """ Forward pass with input x. """
         score_map_tl, score_map_br = self.get_score_map(x)
         if return_dist:
@@ -61,9 +60,9 @@ class Corner_Predictor(nn.Module):
             coorx_br, coory_br, prob_vec_br = self.soft_argmax(score_map_br, return_dist=True, softmax=softmax)
             return torch.stack((coorx_tl, coory_tl, coorx_br, coory_br), dim=1) / self.img_sz, prob_vec_tl, prob_vec_br
         else:
-            coorx_tl, coory_tl = self.soft_argmax(score_map_tl)
-            coorx_br, coory_br = self.soft_argmax(score_map_br)
-            return torch.stack((coorx_tl, coory_tl, coorx_br, coory_br), dim=1) / self.img_sz
+            coorx_tl, coory_tl, _ = self.soft_argmax(score_map_tl)
+            coorx_br, coory_br, _ = self.soft_argmax(score_map_br)
+            return torch.stack((coorx_tl, coory_tl, coorx_br, coory_br), dim=1) / self.img_sz, None, None
 
     def get_score_map(self, x):
         # top-left branch
@@ -81,7 +80,7 @@ class Corner_Predictor(nn.Module):
         score_map_br = self.conv5_br(x_br4)
         return score_map_tl, score_map_br
 
-    def soft_argmax(self, score_map, return_dist=False, softmax=True):
+    def soft_argmax(self, score_map, return_dist:bool=False, softmax:bool=True):
         """ get soft-argmax coordinate for a given heatmap """
         score_vec = score_map.view((-1, self.feat_sz * self.feat_sz))  # (batch, feat_sz * feat_sz)
         prob_vec = nn.functional.softmax(score_vec, dim=1)
@@ -93,7 +92,7 @@ class Corner_Predictor(nn.Module):
             else:
                 return exp_x, exp_y, score_vec
         else:
-            return exp_x, exp_y
+            return exp_x, exp_y, None
 
 
 class Corner_Predictor_Lite(nn.Module):

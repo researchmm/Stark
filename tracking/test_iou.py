@@ -32,7 +32,7 @@ def run_tracker(tracker_name, tracker_param, dir_name, run_id=None, debug=0, thr
 
     dataset = TrackDataset(dir_name).get_sequence_list()
 
-    trackers = [Tracker(tracker_name, tracker_param, 'got10k', run_id)]
+    trackers = [Tracker(tracker_name, tracker_param, 'got10k_test', run_id)]
 
     run_dataset(dataset, trackers, debug, threads, num_gpus=num_gpus, visualize=False, dir_name='', test_iou=True)
 
@@ -41,7 +41,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
     parser.add_argument('tracker_name', type=str, help='Name of tracking method.')
     parser.add_argument('tracker_param', type=str, help='Name of config file.')
-    parser.add_argument('--dir_name', type=str)
+    parser.add_argument('dir_name', type=str)
     parser.add_argument('--runid', type=int, default=None, help='The run id.')
     parser.add_argument('--debug', type=int, default=0, help='Debug level.')
     parser.add_argument('--threads', type=int, default=0, help='Number of threads.')

@@ -10,7 +10,6 @@ from lib.models.stark import build_starkst
 from lib.test.tracker.stark_utils import Preprocessor
 from lib.utils.box_ops import clip_box
 
-
 class STARK_ST(BaseTracker):
     def __init__(self, params, dataset_name):
         super(STARK_ST, self).__init__(params)
@@ -41,6 +40,7 @@ class STARK_ST(BaseTracker):
             self.update_intervals = self.cfg.DATA.MAX_SAMPLE_INTERVAL
         print("Update interval is: ", self.update_intervals)
         self.num_extra_template = len(self.update_intervals)
+        print("num_extra_template = " + str(self.num_extra_template))
 
     def initialize(self, image, info: dict):
         # initialize z_dict_list
@@ -65,12 +65,14 @@ class STARK_ST(BaseTracker):
             return {"all_boxes": all_boxes_save}
 
     def track(self, image, info: dict = None):
+
         H, W, _ = image.shape
         self.frame_id += 1
         # get the t-th search region
         x_patch_arr, resize_factor, x_amask_arr = sample_target(image, self.state, self.params.search_factor,
                                                                 output_sz=self.params.search_size)  # (x1, y1, w, h)
         search = self.preprocessor.process(x_patch_arr, x_amask_arr)
+
         with torch.no_grad():
             x_dict = self.network.forward_backbone(search)
             # merge the template and the search

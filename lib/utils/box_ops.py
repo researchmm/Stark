@@ -1,7 +1,9 @@
 import torch
 from torchvision.ops.boxes import box_area
 import numpy as np
+from typing import Optional, Tuple
 
+from torch import nn, Tensor
 
 def box_cxcywh_to_xyxy(x):
     x_c, y_c, w, h = x.unbind(-1)
@@ -22,7 +24,8 @@ def box_xyxy_to_xywh(x):
     return torch.stack(b, dim=-1)
 
 
-def box_xyxy_to_cxcywh(x):
+def box_xyxy_to_cxcywh(v: Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]):
+    x, y, z = v
     x0, y0, x1, y1 = x.unbind(-1)
     b = [(x0 + x1) / 2, (y0 + y1) / 2,
          (x1 - x0), (y1 - y0)]
