@@ -145,7 +145,7 @@ def get_iou(gt, output, abs=None):
     return np.mean(iou)
 
 
-def my_tracker(get_new_frame, get_init_box, im_dir):
+def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     params = edict()
     # template and search region
     params.template_factor = 2.0
@@ -162,10 +162,12 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
     # print(z_patch_arr)
     #template = process(z_patch_arr, z_amask_arr)
     # forward the template once
-    backbone = torch.jit.load('stark_st_backbone.pt')
+    backbone = torch.jit.load(os.path.join(model_path, 'stark_st_backbone.pt'))
     backbone.eval()
-    transformer = torch.jit.load('stark_st_transformer.pt')
+    transformer = torch.jit.load(os.path.join(model_path, 'stark_st_transformer.pt'))
     transformer.eval()
+    print("template size: " + z_patch_arr.size)
+    print("mask size: " + z_amask_arr.size)
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
     z_dict_list.append(z_dict1)
     for i in range(num_extra_template):
@@ -220,36 +222,37 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
 
 '''
 Script arguments: 
-1) Path to the folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
+1) Path to the dataset folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
 Directory should also contain the file groundtruth.txt with the position of the object at the initial 1st frame.
-2) backend: onnx or tensorflow
+2) model_path: Path to the directory with models
 '''
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
-    parser.add_argument('folder_path', type=str, default=None, help='Path to the folder')
+    parser.add_argument('dataset_path', type=str, default=None, help='Path to the dataset')
+    parser.add_argument('model_path', type=str, default=None, help='Path to the directory with models')
     args = parser.parse_args()
     has_folders = 0
-    for f in os.listdir(args.folder_path):
-        if os.path.isdir(os.path.join(args.folder_path, f)):
+    for f in os.listdir(args.dataset_path):
+        if os.path.isdir(os.path.join(args.dataset_path, f)):
             has_folders = 1
             break
     if has_folders == 1:
         iou = []
-        for f in os.listdir(args.folder_path):
+        for f in os.listdir(args.dataset_path):
             print(f)
-            path = os.path.join(args.folder_path, f)
-            outputs = my_tracker(get_new_frame, get_init_box, path)
+            path = os.path.join(args.dataset_path, f)
+            outputs = my_tracker(get_new_frame, get_init_box, path, args.model_path)
             save_res(path, outputs)
             a = get_iou(get_gt_box(path), np.array(outputs), get_abs_box(path))
             iou.append(a)
             print(a)
         print(np.mean(iou))
     else:
-        outputs = my_tracker(get_new_frame, get_init_box, args.folder_path)
-        save_res(args.folder_path, outputs)
-        print(get_iou(get_gt_box(args.folder_path), np.array(outputs), get_abs_box(args.folder_path)))
+        outputs = my_tracker(get_new_frame, get_init_box, args.dataset_path, args.model_path)
+        save_res(args.dataset_path, outputs)
+        print(get_iou(get_gt_box(args.dataset_path), np.array(outputs), get_abs_box(args.dataset_path)))
 
 
 if __name__ == '__main__':
