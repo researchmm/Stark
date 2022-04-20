@@ -104,7 +104,8 @@ if __name__ == "__main__":
 
     torchscript_model = torch.jit.script(torch_model)
     torchscript_model_optimized = optimize_for_mobile(torchscript_model)
-    torch.jit.save(torchscript_model_optimized, "stark_st_backbone.pt")
+    #torch.jit.save(torchscript_model_optimized, "stark_st_backbone.pt")
+    torchscript_model_optimized._save_for_lite_interpreter("stark_st_backbone.ptl")
     '''
     path = 'stark_st_backbone.pt'
     model = torch.jit.load(path)
