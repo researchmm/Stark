@@ -16,7 +16,7 @@ from copy import deepcopy
 # TODO remove hardcoded dir?
 prj_dir = r'results'
 
-def sample_target(im, target_bb, search_area_factor, output_sz=None):
+def sample_target(im, target_bb, search_area_factor, output_sz):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
 
     args:
@@ -66,14 +66,10 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None):
         end_x = None
     att_mask[y1_pad:end_y, x1_pad:end_x] = 0
 
-    if output_sz is not None:
-        resize_factor = output_sz / crop_sz
-        im_crop_padded = cv2.resize(im_crop_padded, (output_sz, output_sz))
-        att_mask = cv2.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
-        return im_crop_padded, resize_factor, att_mask
-
-    else:
-        return im_crop_padded, att_mask.astype(np.bool_), 1.0
+    resize_factor = output_sz / crop_sz
+    im_crop_padded = cv2.resize(im_crop_padded, (output_sz, output_sz))
+    att_mask = cv2.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
+    return im_crop_padded, resize_factor, att_mask
 
 
 def clip_box(box: list, H, W, margin=0):
@@ -99,7 +95,7 @@ def map_box_back(state, pred_box: list, resize_factor: float):
 
 
 def save_res(im_dir, data):
-    file = os.path.join(prj_dir, "test_videos\\pred_boxes", os.path.split(im_dir)[1] + ".txt")
+    file = os.path.join("test_videos", "pred_boxes", os.path.split(im_dir)[1] + ".txt")
     tracked_bb = np.array(data).astype(int)
     np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')
 
@@ -114,7 +110,7 @@ def get_new_frame(frame_id, im_dir):
 
 def get_init_box(im_dir):
     path = os.path.join(im_dir, "groundtruth.txt")
-    ground_truth_rect = np.loadtxt(path, delimiter=',', dtype=np.int)
+    ground_truth_rect = np.loadtxt(path, delimiter=',', dtype=np.float64)
     if len(ground_truth_rect.shape) == 2:
         return ground_truth_rect[0]
     return ground_truth_rect
