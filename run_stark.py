@@ -13,23 +13,8 @@ import torch
 from lib.utils.misc import NestedTensor
 from copy import deepcopy
 
-prj_dir = r'C:\Users\zadorozhnyy.v\Downloads\mystark'
-
-data_dir = r'C:\Users\zadorozhnyy.v\Downloads\Stark-main\data\got10k\test'
-
-
-def merge_template_search(inp_list, return_search=False, return_template=False):
-    """NOTICE: search region related features must be in the last place"""
-    seq_dict = {"feat": torch.cat([x["feat"] for x in inp_list], dim=0),
-                "mask": torch.cat([x["mask"] for x in inp_list], dim=1),
-                "pos": torch.cat([x["pos"] for x in inp_list], dim=0)}
-    if return_search:
-        x = inp_list[-1]
-        seq_dict.update({"feat_x": x["feat"], "mask_x": x["mask"], "pos_x": x["pos"]})
-    if return_template:
-        z = inp_list[0]
-        seq_dict.update({"feat_z": z["feat"], "mask_z": z["mask"], "pos_z": z["pos"]})
-    return seq_dict
+# TODO remove hardcoded dir?
+prj_dir = r'results'
 
 def sample_target(im, target_bb, search_area_factor, output_sz=None):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
@@ -206,10 +191,13 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
         x_dict = backbone(torch.tensor(x_patch_arr), torch.tensor(x_amask_arr, dtype=torch.bool))
         # merge the template and the search
         feat_dict_list = z_dict_list + [x_dict]
-        seq_dict = merge_template_search(feat_dict_list)
+
         # run the transformer
-        out_dict, _, _ = transformer(seq_dict["feat"], seq_dict["mask"], seq_dict["pos"], run_box_head=True,
-                                     run_cls_head=True)
+        features = torch.cat([x["feat"] for x in feat_dict_list], dim=0)
+        mask = torch.cat([x["mask"] for x in feat_dict_list], dim=1)
+        pos = torch.cat([x["pos"] for x in feat_dict_list], dim=0)
+        out_dict, _, _ = transformer(features, mask, pos, run_box_head=True, run_cls_head=True)
+
         # get the final result
         pred_boxes = out_dict['pred_boxes'].view(-1, 4)
         # Baseline: Take the mean of all pred boxes as the final result
