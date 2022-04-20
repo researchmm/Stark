@@ -13,9 +13,6 @@ import torch
 from lib.utils.misc import NestedTensor
 from copy import deepcopy
 
-# TODO remove hardcoded dir?
-prj_dir = r'results'
-
 def sample_target(im, target_bb, search_area_factor, output_sz):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
 
@@ -94,8 +91,8 @@ def map_box_back(state, pred_box: list, resize_factor: float):
     return [cx_real - 0.5 * w, cy_real - 0.5 * h, w, h]
 
 
-def save_res(im_dir, data):
-    file = os.path.join("test_videos", "pred_boxes", os.path.split(im_dir)[1] + ".txt")
+def save_res(im_dir, data, path):
+    file = os.path.join(path, os.path.split(im_dir)[1] + ".txt")
     tracked_bb = np.array(data).astype(int)
     np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')
 
@@ -166,8 +163,8 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     backbone.eval()
     transformer = torch.jit.load(os.path.join(model_path, 'stark_st_transformer.pt'))
     transformer.eval()
-    print("template size: " + z_patch_arr.size)
-    print("mask size: " + z_amask_arr.size)
+    print("template size: {}".format(z_patch_arr.size))
+    print("mask size: {}".format(z_amask_arr.size))
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
     z_dict_list.append(z_dict1)
     for i in range(num_extra_template):
@@ -225,6 +222,7 @@ Script arguments:
 1) Path to the dataset folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
 Directory should also contain the file groundtruth.txt with the position of the object at the initial 1st frame.
 2) model_path: Path to the directory with models
+2) output_path: Path to the directory with results
 '''
 
 
@@ -232,8 +230,11 @@ def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
     parser.add_argument('dataset_path', type=str, default=None, help='Path to the dataset')
     parser.add_argument('model_path', type=str, default=None, help='Path to the directory with models')
+    parser.add_argument('output_path', type=str, default=None, help='Path to the directory with results')
     args = parser.parse_args()
     has_folders = 0
+    if not os.path.exists(args.output_path):
+        os.mkdir(args.output_path)
     for f in os.listdir(args.dataset_path):
         if os.path.isdir(os.path.join(args.dataset_path, f)):
             has_folders = 1
@@ -241,17 +242,19 @@ def main():
     if has_folders == 1:
         iou = []
         for f in os.listdir(args.dataset_path):
+            if not os.path.isdir(os.path.join(args.dataset_path, f)):
+                continue
             print(f)
             path = os.path.join(args.dataset_path, f)
             outputs = my_tracker(get_new_frame, get_init_box, path, args.model_path)
-            save_res(path, outputs)
+            save_res(path, outputs, args.output_path)
             a = get_iou(get_gt_box(path), np.array(outputs), get_abs_box(path))
             iou.append(a)
             print(a)
         print(np.mean(iou))
     else:
         outputs = my_tracker(get_new_frame, get_init_box, args.dataset_path, args.model_path)
-        save_res(args.dataset_path, outputs)
+        save_res(args.dataset_path, outputs, args.output_path)
         print(get_iou(get_gt_box(args.dataset_path), np.array(outputs), get_abs_box(args.dataset_path)))
 
 
