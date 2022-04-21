@@ -98,7 +98,7 @@ def save_res(im_dir, data, path):
 
 
 def get_new_frame(frame_id, im_dir):
-    imgs = [img for img in os.listdir(im_dir) if img.endswith(".jpg")]
+    imgs = [img for img in sorted(os.listdir(im_dir)) if img.endswith(".jpg")]
     if len(imgs) <= frame_id:
         return None
     im = cv2.imread(os.path.join(im_dir, imgs[frame_id]))
