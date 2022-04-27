@@ -63,6 +63,17 @@ def sample_target(im, target_bb, search_area_factor, output_sz):
         end_x = None
     att_mask[y1_pad:end_y, x1_pad:end_x] = 0
 
+    print("------- im crop 0-------")
+    print(im_crop[0][0])
+    print(im_crop[0][1])
+    print(im_crop[0][2])
+    print(im_crop[0][3])
+    print("------- im crop 1-------")
+    print(im_crop[1][0])
+    print(im_crop[1][1])
+    print(im_crop[1][2])
+    print(im_crop[1][3])
+
     resize_factor = output_sz / crop_sz
     im_crop_padded = cv2.resize(im_crop_padded, (output_sz, output_sz))
     att_mask = cv2.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
@@ -102,7 +113,7 @@ def get_new_frame(frame_id, im_dir):
     if len(imgs) <= frame_id:
         return None
     im = cv2.imread(os.path.join(im_dir, imgs[frame_id]))
-    return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    return cv2.cvtColor(im, cv2.COLOR_BGRA2BGR)
 
 
 def get_init_box(im_dir):
@@ -156,6 +167,13 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     state = get_init_box(im_dir)
     image = get_new_frame(frame_id, im_dir)
     z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor, output_sz=params.template_size)
+    print("image size: {}".format(image.shape))
+    for r in range(0, 10):
+        print("------- image {}-------".format(r))
+        for c in range(0, 10):
+            print(image[r][c])
+
+    # print(z_patch_arr[0][0])
     # print(z_patch_arr)
     #template = process(z_patch_arr, z_amask_arr)
     # forward the template once
@@ -166,6 +184,7 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     print("template size: {}".format(z_patch_arr.shape))
     print("mask size: {}".format(z_amask_arr.shape))
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
+    print(z_dict1["feat"][0][0][0].item())
     z_dict_list.append(z_dict1)
     for i in range(num_extra_template):
         z_dict_list.append(z_dict1)
@@ -195,10 +214,12 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
 
         # get the final result
         pred_boxes = out_dict['pred_boxes'].view(-1, 4)
+        print('pred_boxes: {}'.format(pred_boxes))
         # Baseline: Take the mean of all pred boxes as the final result
         pred_box = (pred_boxes.mean(dim=0) * params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
         # get the final box result
         state = clip_box(map_box_back(state=state, pred_box=pred_box, resize_factor=resize_factor), H, W, margin=10)
+        print('bbox: {}'.format(state))
         # get confidence score (whether the search region is reliable)
         conf_score = out_dict["pred_logits"].view(-1).sigmoid().item()
         # update template
