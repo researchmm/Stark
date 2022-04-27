@@ -1,16 +1,10 @@
 import argparse
 import torch
-import _init_paths
 from lib.models.stark.repvgg import repvgg_model_convert
 from lib.models.stark import build_starkst
 from lib.config.stark_st2.config import cfg, update_config_from_file
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.onnx
-import numpy as np
-import onnx
-import onnxruntime
-import time
 import os
 from lib.test.evaluation.environment import env_settings
 from torch.utils.mobile_optimizer import optimize_for_mobile
