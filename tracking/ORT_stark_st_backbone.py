@@ -9,6 +9,7 @@ import os
 from lib.test.evaluation.environment import env_settings
 from torch.utils.mobile_optimizer import optimize_for_mobile
 from lib.utils.misc import NestedTensor
+import collections.abc as container_abcs
 
 
 # img_arr (H,W,3)
