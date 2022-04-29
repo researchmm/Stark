@@ -3,9 +3,15 @@ import sys
 import argparse
 import cv2
 from easydict import EasyDict as edict
+from PIL import Image
+import yaml
 import numpy as np
+from collections import OrderedDict
+import time
 import math
 import torch
+from lib.utils.misc import NestedTensor
+from copy import deepcopy
 
 def sample_target(im, target_bb, search_area_factor, output_sz):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
@@ -85,8 +91,8 @@ def map_box_back(state, pred_box: list, resize_factor: float):
     return [cx_real - 0.5 * w, cy_real - 0.5 * h, w, h]
 
 
-def save_res(im_dir, data):
-    file = os.path.join("test_videos", "pred_boxes", os.path.split(im_dir)[1] + ".txt")
+def save_res(im_dir, data, path):
+    file = os.path.join(path, os.path.split(im_dir)[1] + ".txt")
     tracked_bb = np.array(data).astype(int)
     np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')
 
@@ -136,7 +142,7 @@ def get_iou(gt, output, abs=None):
     return np.mean(iou)
 
 
-def my_tracker(get_new_frame, get_init_box, im_dir):
+def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     params = edict()
     # template and search region
     params.template_factor = 2.0
@@ -150,11 +156,15 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
     state = get_init_box(im_dir)
     image = get_new_frame(frame_id, im_dir)
     z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor, output_sz=params.template_size)
+    # print(z_patch_arr)
+    #template = process(z_patch_arr, z_amask_arr)
     # forward the template once
-    backbone = torch.jit.load('stark_st_backbone.pt')
+    backbone = torch.jit.load(os.path.join(model_path, 'stark_st_backbone.pt'))
     backbone.eval()
-    transformer = torch.jit.load('stark_st_transformer.pt')
+    transformer = torch.jit.load(os.path.join(model_path, 'stark_st_transformer.pt'))
     transformer.eval()
+    print("template size: {}".format(z_patch_arr.shape))
+    print("mask size: {}".format(z_amask_arr.shape))
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
     z_dict_list.append(z_dict1)
     for i in range(num_extra_template):
@@ -168,6 +178,11 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
         # get the t-th search region
         x_patch_arr, resize_factor, x_amask_arr = sample_target(image, state, params.search_factor,
                                                                 output_sz=params.search_size)  # (x1, y1, w, h)
+        '''
+        print(x_patch_arr.shape)
+        print(x_amask_arr.shape)
+        search = process(x_patch_arr, x_amask_arr)
+        '''
         x_dict = backbone(torch.tensor(x_patch_arr), torch.tensor(x_amask_arr, dtype=torch.bool))
         # merge the template and the search
         feat_dict_list = z_dict_list + [x_dict]
@@ -191,6 +206,7 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
             if frame_id % update_i == 0 and conf_score > 0.5:
                 z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor,
                                                             output_sz=params.template_size)  # (x1, y1, w, h)
+                #template_t = process(z_patch_arr, z_amask_arr)
                 with torch.no_grad():
                     z_dict_t = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
                 z_dict_list[idx + 1] = z_dict_t  # the 1st element of z_dict_list is template from the 1st frame
@@ -203,36 +219,43 @@ def my_tracker(get_new_frame, get_init_box, im_dir):
 
 '''
 Script arguments: 
-1) Path to the folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
+1) Path to the dataset folder - full path to the directory with images with .jpg extension; image names are numbers in increasing order.
 Directory should also contain the file groundtruth.txt with the position of the object at the initial 1st frame.
-2) backend: onnx or tensorflow
+2) model_path: Path to the directory with models
+2) output_path: Path to the directory with results
 '''
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run tracker on sequence or dataset.')
-    parser.add_argument('folder_path', type=str, default=None, help='Path to the folder')
+    parser.add_argument('dataset_path', type=str, default=None, help='Path to the dataset')
+    parser.add_argument('model_path', type=str, default=None, help='Path to the directory with models')
+    parser.add_argument('output_path', type=str, default=None, help='Path to the directory with results')
     args = parser.parse_args()
     has_folders = 0
-    for f in os.listdir(args.folder_path):
-        if os.path.isdir(os.path.join(args.folder_path, f)):
+    if not os.path.exists(args.output_path):
+        os.mkdir(args.output_path)
+    for f in os.listdir(args.dataset_path):
+        if os.path.isdir(os.path.join(args.dataset_path, f)):
             has_folders = 1
             break
     if has_folders == 1:
         iou = []
-        for f in os.listdir(args.folder_path):
+        for f in os.listdir(args.dataset_path):
+            if not os.path.isdir(os.path.join(args.dataset_path, f)):
+                continue
             print(f)
-            path = os.path.join(args.folder_path, f)
-            outputs = my_tracker(get_new_frame, get_init_box, path)
-            save_res(path, outputs)
+            path = os.path.join(args.dataset_path, f)
+            outputs = my_tracker(get_new_frame, get_init_box, path, args.model_path)
+            save_res(path, outputs, args.output_path)
             a = get_iou(get_gt_box(path), np.array(outputs), get_abs_box(path))
             iou.append(a)
             print(a)
         print(np.mean(iou))
     else:
-        outputs = my_tracker(get_new_frame, get_init_box, args.folder_path)
-        save_res(args.folder_path, outputs)
-        print(get_iou(get_gt_box(args.folder_path), np.array(outputs), get_abs_box(args.folder_path)))
+        outputs = my_tracker(get_new_frame, get_init_box, args.dataset_path, args.model_path)
+        save_res(args.dataset_path, outputs, args.output_path)
+        print(get_iou(get_gt_box(args.dataset_path), np.array(outputs), get_abs_box(args.dataset_path)))
 
 
 if __name__ == '__main__':
