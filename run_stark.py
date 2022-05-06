@@ -154,8 +154,6 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     backbone.eval()
     transformer = torch.jit.load(os.path.join(model_path, 'stark_st_transformer.pt'))
     transformer.eval()
-    print("template size: {}".format(z_patch_arr.shape))
-    print("mask size: {}".format(z_amask_arr.shape))
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
     z_dict_list.append(z_dict1)
     for i in range(num_extra_template):
@@ -217,7 +215,6 @@ def main():
     parser.add_argument('model_path', type=str, default=None, help='Path to the directory with models')
     parser.add_argument('output_path', type=str, default=None, help='Path to the directory with results')
     args = parser.parse_args()
-    print(args.output_path)
     has_folders = 0
     if not os.path.exists(args.output_path):
         os.mkdir(args.output_path)
