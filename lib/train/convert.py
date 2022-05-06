@@ -5,7 +5,7 @@ import importlib
 import cv2 as cv
 import torch.backends.cudnn
 import torch.distributed as dist
-
+from torch.autograd import Variable
 import random
 import numpy as np
 torch.backends.cudnn.benchmark = False
@@ -15,7 +15,7 @@ import lib.train.admin.settings as ws_settings
 from lib.train.base_functions import *
 from lib.models.stark import build_starks, build_starkst
 from lib.test.parameter.stark_st import parameters
-
+from lib.utils.misc import NestedTensor
 
 def init_seeds(seed):
     random.seed(seed)
@@ -105,7 +105,7 @@ def convert(settings, out_dir):
     else:
         raise ValueError("illegal script name")
 
-    params = parameters("yaml_file")
+    params = parameters(settings.config_name)
     net.load_state_dict(torch.load(params.checkpoint, map_location='cpu')['net'], strict=True)
     # wrap networks to distributed one
     net.cuda()
@@ -125,7 +125,7 @@ def export(trained_model, out_dir):
         os.makedirs("%s" % out_dir)
 
     # Export the trained model to ONNX
-    dummy_input = Variable(torch.randn(1, 1, 28, 28)) # one black and white 28 x 28 picture will be the input to the model
+    dummy_input = NestedTensor(Variable(torch.randn(4, 3, 128, 128)), Variable(torch.randn(4, 128, 128))) # one black and white 28 x 28 picture will be the input to the model
     torch.onnx.export(trained_model, dummy_input, "%s/mnist.onnx" % out_dir)
 
     # Load the ONNX file
@@ -171,8 +171,8 @@ def main():
     if args.local_rank != -1:
         dist.init_process_group(backend='nccl')
         torch.cuda.set_device(args.local_rank)
-    # else:
-    #     torch.cuda.set_device(0)
+    else:
+         torch.cuda.set_device(0)
     run_convert(args.script, args.config, cudnn_benchmark=args.cudnn_benchmark,
                  local_rank=args.local_rank, save_dir=args.save_dir, base_seed=args.seed,
                  use_lmdb=args.use_lmdb, script_name_prv=args.script_prv, config_name_prv=args.config_prv,

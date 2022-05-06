@@ -9,7 +9,7 @@ Copy-paste from torch.nn.Transformer with modifications:
 2020.12.23 Split some preprocess fom the forward function
 """
 import copy
-from typing import Optional, List
+from typing import Optional, List, Tuple, Dict
 
 import torch
 import torch.nn.functional as F
@@ -71,7 +71,8 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, feat, mask, query_embed, pos_embed, mode="all", return_encoder_output=False):
+    def forward(self, feat, mask, query_embed:Tensor, pos_embed, mode: str="all", return_encoder_output: bool=False)\
+        ->Tuple[Tensor, Tensor]:
         """
 
         :param feat: (H1W1+H2W2, bs, C)
@@ -88,7 +89,7 @@ class Transformer(nn.Module):
         else:
             memory = self.encoder(feat, src_key_padding_mask=mask, pos=pos_embed)
         if mode == "encoder":
-            return memory
+            return memory, torch.empty(1)
         elif mode == "all":
             assert len(query_embed.size()) in [2, 3]
             if len(query_embed.size()) == 2:
@@ -101,10 +102,12 @@ class Transformer(nn.Module):
             else:
                 hs = query_embed.unsqueeze(0)
             if return_encoder_output:
-                return hs.transpose(1, 2), memory # (1, B, N, C)
+                return hs.transpose(1, 2), memory  # (1, B, N, C)
             else:
-                return hs.transpose(1, 2) # (1, B, N, C)
-
+                #return hs.transpose(1, 2)
+                return hs.transpose(1, 2), torch.empty(1)  # (1, B, N, C)
+        else:
+            return torch.empty(1), torch.empty(1)
 
 class TransformerEncoder(nn.Module):
 
@@ -118,7 +121,8 @@ class TransformerEncoder(nn.Module):
                 mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None,
                 pos: Optional[Tensor] = None,
-                return_intermediate=False):
+                return_intermediate:bool=False):
+        '''
         if return_intermediate:
             output_list = []
             output = src
@@ -133,16 +137,17 @@ class TransformerEncoder(nn.Module):
                 output_list.append(output)
             return output_list
         else:
-            output = src
+        '''
+        output = src
 
-            for layer in self.layers:
-                output = layer(output, src_mask=mask,
-                               src_key_padding_mask=src_key_padding_mask, pos=pos)
+        for layer in self.layers:
+            output = layer(output, src_mask=mask,
+                           src_key_padding_mask=src_key_padding_mask, pos=pos)
 
-            if self.norm is not None:
-                output = self.norm(output)
+        if self.norm is not None:
+            output = self.norm(output)
 
-            return output
+        return output
 
 
 class TransformerEncoderLite(nn.Module):
@@ -155,6 +160,7 @@ class TransformerEncoderLite(nn.Module):
         assert self.num_layers == 1
 
     def forward(self, seq_dict, return_intermediate=False, part_att=False):
+        '''
         if return_intermediate:
             output_list = []
 
@@ -167,12 +173,13 @@ class TransformerEncoderLite(nn.Module):
                 output_list.append(output)
             return output_list
         else:
-            output = self.layers[-1](seq_dict, part_att=part_att)
+        '''
+        output = self.layers[-1](seq_dict, part_att=part_att)
 
-            if self.norm is not None:
-                output = self.norm(output)
+        if self.norm is not None:
+            output = self.norm(output)
 
-            return output
+        return output
 
 
 class TransformerDecoder(nn.Module):

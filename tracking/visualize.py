@@ -42,8 +42,9 @@ class TrackDataset():
         frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".jpg")]
         frame_list.sort(key=lambda f: int(f[:-4]))
         frames_list = [os.path.join(frames_path, frame) for frame in frame_list]
-
-        return Sequence(sequence_name if sequence_name != '' else os.path.split(self.base_path)[1], frames_list, 'got10k', ground_truth_rect.reshape(-1, 4))
+        target_visible = np.loadtxt('{}/{}/absence.label'.format(self.base_path, sequence_name))
+        return Sequence(sequence_name if sequence_name != '' else os.path.split(self.base_path)[1], frames_list, 'got10k',
+                        ground_truth_rect.reshape(-1, 4), target_visible=target_visible)
 
     def __len__(self):
         return len(self.sequence_list)
@@ -69,7 +70,7 @@ def run_tracker(tracker_name, tracker_param, dir_name, run_id=None, debug=0, thr
     os.mkdir(res_dir)
     print(dataset)
 
-    trackers = [Tracker(tracker_name, tracker_param, 'got10k', run_id)]
+    trackers = [Tracker(tracker_name, tracker_param, 'got10k_test', run_id)]
 
     run_dataset(dataset, trackers, debug, threads, num_gpus=num_gpus, visualize=True, dir_name=res_dir)
 

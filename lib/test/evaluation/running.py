@@ -10,17 +10,19 @@ import cv2 as cv
 def get_iou(seq, output):
     tr = np.array(seq.ground_truth_rect)
     n = min(tr.shape[0], output.shape[0])
+    abs = seq.target_visible
     iou = []
     for i in range(1, n):
-        x_l = max(tr[i][0], output[i][0])
-        y_top = max(tr[i][1], output[i][1])
-        x_r = min(tr[i][0] + tr[i][2], output[i][0] + output[i][2])
-        y_bot = min(tr[i][1] + tr[i][3], output[i][1] + output[i][3])
-        if x_r < x_l or y_bot < y_top:
-            iou.append(0.0)
-        else:
-            inter = (x_r - x_l) * (y_bot - y_top)
-            iou.append(inter / (tr[i][2]*tr[i][3] + output[i][2] * output[i][3] - inter))
+        if int(abs[i]) == 0:
+            x_l = max(tr[i][0], output[i][0])
+            y_top = max(tr[i][1], output[i][1])
+            x_r = min(tr[i][0] + tr[i][2], output[i][0] + output[i][2])
+            y_bot = min(tr[i][1] + tr[i][3], output[i][1] + output[i][3])
+            if x_r < x_l or y_bot < y_top:
+                iou.append(0.0)
+            else:
+                inter = (x_r - x_l) * (y_bot - y_top)
+                iou.append(inter / (tr[i][2]*tr[i][3] + output[i][2] * output[i][3] - inter))
     #print(iou)
     return np.mean(iou)
 def visualize_results(seq, dir_name, output):
@@ -153,11 +155,14 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visual
     if debug:
         output = tracker.run_sequence(seq, debug=debug)
     else:
+        output = tracker.run_sequence(seq, debug=debug)
+        '''
         try:
             output = tracker.run_sequence(seq, debug=debug)
         except Exception as e:
             print(e)
             return
+        '''
 
     sys.stdout.flush()
 
@@ -170,7 +175,7 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8, visual
 
     print('FPS: {}'.format(num_frames / exec_time))
 
-    if not debug and not visualize and not test_iou:
+    if not debug and not visualize:
         _save_tracker_output(seq, tracker, output)
     if visualize:
         visualize_results(seq, dir_name, output['target_bbox'])
@@ -201,8 +206,9 @@ def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8, visualize
         iou = 0.0
         for seq in dataset:
             for tracker_info in trackers:
-                iou += run_sequence(seq, tracker_info, debug=debug, visualize=visualize, dir_name=dir_name, test_iou=test_iou)
-                print(iou)
+                l = run_sequence(seq, tracker_info, debug=debug, visualize=visualize, dir_name=dir_name, test_iou=test_iou)
+                iou += l
+                print(l)
 
     elif mode == 'parallel':
         param_list = [(seq, tracker_info, debug, num_gpus) for seq, tracker_info in product(dataset, trackers)]
