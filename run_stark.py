@@ -1,17 +1,10 @@
 import os
-import sys
 import argparse
 import cv2
 from easydict import EasyDict as edict
-from PIL import Image
-import yaml
 import numpy as np
-from collections import OrderedDict
-import time
 import math
 import torch
-from lib.utils.misc import NestedTensor
-from copy import deepcopy
 
 def sample_target(im, target_bb, search_area_factor, output_sz):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
@@ -167,22 +160,11 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
     state = get_init_box(im_dir)
     image = get_new_frame(frame_id, im_dir)
     z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor, output_sz=params.template_size)
-    print("image size: {}".format(image.shape))
-    for r in range(0, 10):
-        print("------- image {}-------".format(r))
-        for c in range(0, 10):
-            print(image[r][c])
-
-    # print(z_patch_arr[0][0])
-    # print(z_patch_arr)
-    #template = process(z_patch_arr, z_amask_arr)
     # forward the template once
     backbone = torch.jit.load(os.path.join(model_path, 'stark_st_backbone.pt'))
     backbone.eval()
     transformer = torch.jit.load(os.path.join(model_path, 'stark_st_transformer.pt'))
     transformer.eval()
-    print("template size: {}".format(z_patch_arr.shape))
-    print("mask size: {}".format(z_amask_arr.shape))
     z_dict1 = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
     print(z_dict1["feat"][0][0][0].item())
     z_dict_list.append(z_dict1)
@@ -197,11 +179,6 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
         # get the t-th search region
         x_patch_arr, resize_factor, x_amask_arr = sample_target(image, state, params.search_factor,
                                                                 output_sz=params.search_size)  # (x1, y1, w, h)
-        '''
-        print(x_patch_arr.shape)
-        print(x_amask_arr.shape)
-        search = process(x_patch_arr, x_amask_arr)
-        '''
         x_dict = backbone(torch.tensor(x_patch_arr), torch.tensor(x_amask_arr, dtype=torch.bool))
         # merge the template and the search
         feat_dict_list = z_dict_list + [x_dict]
@@ -227,7 +204,6 @@ def my_tracker(get_new_frame, get_init_box, im_dir, model_path):
             if frame_id % update_i == 0 and conf_score > 0.5:
                 z_patch_arr, _, z_amask_arr = sample_target(image, state, params.template_factor,
                                                             output_sz=params.template_size)  # (x1, y1, w, h)
-                #template_t = process(z_patch_arr, z_amask_arr)
                 with torch.no_grad():
                     z_dict_t = backbone(torch.tensor(z_patch_arr), torch.tensor(z_amask_arr, dtype=torch.bool))
                 z_dict_list[idx + 1] = z_dict_t  # the 1st element of z_dict_list is template from the 1st frame
